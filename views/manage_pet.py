@@ -1,121 +1,131 @@
-from customtkinter import * 
+# manage_pet.py
+
+from customtkinter import *
 from PIL import Image
 from tkinter import ttk
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from controllers.manage_pet_controller import add_pet, delete_pet, update_pet, search_pets, get_all_pets
 
-window = CTk()
-window.geometry('930x580')
-window.resizable(False, False)
-window.title('Quản lý vật nuôi')
-window.configure(fg_color='#161C30')
+def setup_treeview(parent):
+    """Hàm tạo và cấu hình Treeview trong giao diện"""
+    style = ttk.Style()
+    style.configure("Treeview", font=('Arial', 14))
+    style.configure("Treeview.Heading", font=('Arial', 16, 'bold'))
 
-# Logo
-logo = CTkImage(Image.open('./image/logo6.jpeg'), size=(930,158))
-logoLabel = CTkLabel(window, image=logo, text='')
-logoLabel.grid(row=0, column=0, columnspan=2)
+    treeFrame = CTkFrame(parent, fg_color='#161C30')
+    treeFrame.grid(row=1, column=0, columnspan=7, pady=10, sticky="nsew")
 
-# Frame bên trái
-leftFrame = CTkFrame(window, fg_color='#161C30')
-leftFrame.grid(row=1, column=0, padx=10, pady=10, sticky="nw")
+    tree = ttk.Treeview(treeFrame, height=20)
+    tree.grid(row=0, column=0, sticky="nsew")
 
-# id vật nuôi
-idLabel = CTkLabel(leftFrame, text='ID vật nuôi', font=('arial', 18, 'bold'))
-idLabel.grid(row=0, column=0, padx=20, pady=15)
-idEntry = CTkEntry(leftFrame, font=('arial', 15, 'bold'), width=140)
-idEntry.grid(row=0, column=1)
+    # Cấu hình các cột
+    columns = ["col_id", "col_ten", "col_loai", "col_tuoi", "col_gioitinh", "col_idchu"]
+    headers = ["ID vật nuôi", "Tên vật nuôi", "Loài", "Tuổi", "Giới tính", "ID chủ vật nuôi"]
+    
+    tree["columns"] = columns
+    tree.column("#0", width=0, stretch=False)
+    tree.heading("#0", text="")
 
-# tên vật nuôi 
-TenLabel = CTkLabel(leftFrame, text='Tên vật nuôi', font=('arial', 18, 'bold'))
-TenLabel.grid(row=1, column=0, padx=20, pady=15)
-TenEntry = CTkEntry(leftFrame, font=('arial', 15, 'bold'), width=140)
-TenEntry.grid(row=1, column=1)
+    for col, header in zip(columns, headers):
+        tree.heading(col, text=header)
+        tree.column(col, anchor="center", width=120 if col != "col_ten" else 250)
 
-# loài vật nuôi 
-LoaiLabel = CTkLabel(leftFrame, text='Loài', font=('arial', 18, 'bold'))
-LoaiLabel.grid(row=2, column=0, padx=20, pady=15)
-LoaiEntry = CTkEntry(leftFrame, font=('arial', 15, 'bold'), width=140)
-LoaiEntry.grid(row=2, column=1)
+    # Thêm scrollbar
+    scrollbar = ttk.Scrollbar(treeFrame, orient=VERTICAL, command=tree.yview)
+    scrollbar.grid(row=0, column=1, sticky="ns")
+    tree.configure(yscrollcommand=scrollbar.set)
 
-# tuổi vật nuôi 
-TuoiLabel = CTkLabel(leftFrame, text='Tuổi', font=('arial', 18, 'bold'))
-TuoiLabel.grid(row=3, column=0, padx=20, pady=15)
-TuoiEntry = CTkEntry(leftFrame, font=('arial', 15, 'bold'), width=140)
-TuoiEntry.grid(row=3, column=1)
+    return tree
 
-# giới tính vật nuôi 
-GTLabel = CTkLabel(leftFrame, text='Giới tính', font=('arial', 18, 'bold'))
-GTLabel.grid(row=4, column=0, padx=20, pady=15)
-GToptions = ['Đực', 'Cái']
-GTbox = CTkComboBox(leftFrame, values=GToptions, width=140)
-GTbox.grid(row=4, column=1)
 
-# id chủ vật nuôi 
-ID_chuLabel = CTkLabel(leftFrame, text='ID chủ vật nuôi', font=('arial', 18, 'bold'))
-ID_chuLabel.grid(row=5, column=0, padx=20, pady=15)
-ID_chuEntry = CTkEntry(leftFrame, font=('arial', 15, 'bold'), width=140)
-ID_chuEntry.grid(row=5, column=1)
+def open_manage_pet():
+    window = CTkToplevel()  # Tạo cửa sổ con mới
+    window.geometry('930x580')
+    window.resizable(False, False)
+    window.title('Quản lý vật nuôi')
+    window.configure(fg_color='#161C30')
 
-# Frame bên phải
-rightFrame = CTkFrame(window, fg_color='#161C30')
-rightFrame.grid(row=1, column=1, padx=10, pady=10, sticky="ne")
+    # Logo
+    try:
+        logo = CTkImage(Image.open('./image/logo6.jpeg'), size=(930, 158))
+    except Exception as e:
+        print(f"Lỗi khi tải hình ảnh: {e}")
+        return
 
-search_options = ['ID vật nuôi', 'Tên vật nuôi', 'Loài', 'Tuổi', 'Giới tính', 'ID chủ vật nuôi']
-searchbox = CTkComboBox(rightFrame, values=search_options, width=140)
-searchbox.grid(row=0, column=0)
-searchbox.set("Tìm kiếm theo")
+    CTkLabel(window, image=logo, text='').grid(row=0, column=0, columnspan=2)
 
-searchEntry = CTkEntry(rightFrame, width=140)
-searchEntry.grid(row=0, column=1, padx=5)
+    # Left Frame - Form nhập liệu
+    leftFrame = CTkFrame(window, fg_color='#161C30')
+    leftFrame.grid(row=1, column=0, padx=10, pady=10, sticky="nw")
 
-searchButttom = CTkButton(rightFrame, text='Tìm kiếm', width=80)
-searchButttom.grid(row=0, column=2, padx=5)
+    labels = ["ID vật nuôi", "Tên vật nuôi", "Loài", "Tuổi", "Giới tính", "ID chủ vật nuôi"]
+    entries = {}
 
-showallButtton = CTkButton(rightFrame, text='Show all', width=80)
-showallButtton.grid(row=0, column=3, padx=5)
+    for i, label in enumerate(labels):
+        CTkLabel(leftFrame, text=label, font=('Arial', 18, 'bold')).grid(row=i, column=0, padx=20, pady=10)
+        
+        if label == "Giới tính":
+            entries[label] = CTkComboBox(leftFrame, values=["Đực", "Cái"], width=140)
+        else:
+            entries[label] = CTkEntry(leftFrame, font=('Arial', 15), width=140)
+        
+        entries[label].grid(row=i, column=1, pady=5)
 
-# Frame chứa Treeview và scrollbar
-treeFrame = CTkFrame(rightFrame, fg_color='#161C30')
-treeFrame.grid(row=1, column=0, columnspan=7, pady=10, sticky="nsew")
+    # Right Frame - Treeview và tìm kiếm
+    rightFrame = CTkFrame(window, fg_color='#161C30')
+    rightFrame.grid(row=1, column=1, padx=10, pady=10, sticky="ne")
 
-# Cấu hình Treeview với font chữ lớn hơn
-style = ttk.Style()
-style.configure("Treeview", font=('arial', 14))
-style.configure("Treeview.Heading", font=('arial', 16, 'bold'))
+    search_options = ["id", "ten", "loai", "tuoi", "gioi_tinh", "id_chu"]
+    searchbox = CTkComboBox(rightFrame, values=search_options, width=140)
+    searchbox.set("Tìm kiếm theo")
+    searchbox.grid(row=0, column=0)
 
-tree = ttk.Treeview(treeFrame, height=20)
-tree.grid(row=0, column=0, sticky="nsew")
+    searchEntry = CTkEntry(rightFrame, width=140, placeholder_text="Nhập từ khóa...")
+    searchEntry.grid(row=0, column=1, padx=5)
 
-# Đặt tên cho các cột
-tree["columns"] = ("col_id", "col_ten", "col_loai", "col_tuoi", "col_gioitinh", "col_idchu")
-tree.column("#0", width=0, stretch=False)
-tree.heading("#0", text="")
+    CTkButton(rightFrame, text='Tìm kiếm', width=80, command=lambda: on_search(tree, searchbox.get(), searchEntry.get())).grid(row=0, column=2, padx=5)
+    CTkButton(rightFrame, text='Show all', width=80, command=lambda: show_all(tree)).grid(row=0, column=3, padx=5)
 
-tree.heading("col_id", text="ID vật nuôi")
-tree.heading("col_ten", text="Tên vật nuôi")
-tree.heading("col_loai", text="Loài")
-tree.heading("col_tuoi", text="Tuổi")
-tree.heading("col_gioitinh", text="Giới tính")
-tree.heading("col_idchu", text="ID chủ vật nuôi")
+    # Treeview
+    tree = setup_treeview(rightFrame)
 
-tree.column("col_id", anchor=CENTER, width=120)
-tree.column("col_ten", anchor=W, width=250)
-tree.column("col_loai", anchor=W, width=150)
-tree.column("col_tuoi", anchor=CENTER, width=100)
-tree.column("col_gioitinh", anchor=CENTER, width=100)
-tree.column("col_idchu", anchor=CENTER, width=150)
+    # Button Frame - Các chức năng
+    buttonFrame = CTkFrame(window, fg_color='#161C30')
+    buttonFrame.grid(row=2, column=0, columnspan=2, pady=10)
 
-# Tạo scrollbar và gắn vào Treeview
-scrollbar = ttk.Scrollbar(treeFrame, orient=VERTICAL, command=tree.yview)
-scrollbar.grid(row=0, column=1, sticky="ns")
-tree.configure(yscrollcommand=scrollbar.set)
+    buttons = ["Thêm mới", "Sửa", "Xoá"]
+    button_commands = [lambda: on_add(entries, tree), lambda: on_update(entries, tree), lambda: on_delete(tree)]
+    for i, (text, command) in enumerate(zip(buttons, button_commands)):
+        CTkButton(buttonFrame, text=text, font=('Arial', 15, 'bold'), width=160, command=command).grid(row=0, column=i, padx=10, pady=5)
 
-# Frame chứa các nút chức năng
-buttonFrame = CTkFrame(window, fg_color='#161C30')
-buttonFrame.grid(row=2, column=0, columnspan=2)
-newButtton = CTkButton(buttonFrame, text='Thêm mới', font=('arial', 15, 'bold'), width=160)
-newButtton.grid(row=0, column=0, pady=5)
-updateButtton = CTkButton(buttonFrame, text='Sửa', font=('arial', 15, 'bold'), width=160)
-updateButtton.grid(row=0, column=1, pady=5)
-deleteButtton = CTkButton(buttonFrame, text='Xoá', font=('arial', 15, 'bold'), width=160)
-deleteButtton.grid(row=0, column=2, pady=5)
+    window.mainloop()
 
-window.mainloop()
+def on_add(entries, tree):
+    pet = {label: entry.get() for label, entry in entries.items()}
+    add_pet(pet)
+    refresh_tree(tree)
+
+def on_update(entries, tree):
+    pet = {label: entry.get() for label, entry in entries.items()}
+    update_pet(pet)
+    refresh_tree(tree)
+
+def on_delete(tree):
+    selected_item = tree.selection()[0]
+    pet_id = tree.item(selected_item, "values")[0]
+    delete_pet(pet_id)
+    refresh_tree(tree)
+
+def on_search(tree, field, keyword):
+    results = search_pets(keyword, field)
+    refresh_tree(tree, results)
+
+def show_all(tree):
+    pets = get_all_pets()
+    refresh_tree(tree, pets)
+
+def refresh_tree(tree, pets=None):
+    if pets is None:
+        pets = get_all_pets()
