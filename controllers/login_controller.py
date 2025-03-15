@@ -1,30 +1,25 @@
 import mysql.connector
-from tkinter import messagebox
 from utils.connect_dtb import connect_db
 
 def login(username, password, root, open_main_callback):
-    if username == '' or password == '':
-        messagebox.showerror("Lỗi", "Tên đăng nhập hoặc mật khẩu không được để trống!")
-        return
-    
     try:
         conn = connect_db()  # Kết nối đến database
         cursor = conn.cursor()
 
-        # Kiểm tra tài khoản trong bảng nguoi dùng 
+        # Kiểm tra tài khoản trong bảng nguoi_dung 
         query = "SELECT * FROM nguoi_dung WHERE username = %s AND password = %s"
         cursor.execute(query, (username, password))
         user = cursor.fetchone()
 
         if user:
-            messagebox.showinfo("Thông báo", "Đăng nhập thành công!")
-            root.destroy()  # Đóng cửa sổ đăng nhập
-            open_main_callback()  # Gọi hàm mở giao diện chính
+            root.destroy()  # Đóng cửa sổ đăng nhập ngay lập tức
+            open_main_callback(root)  # Gọi hàm mở giao diện chính
+            return True  # Trả về True nếu đăng nhập thành công
         else:
-            messagebox.showerror("Lỗi", "Tên đăng nhập hoặc mật khẩu sai!")
+            return False  # Trả về False nếu đăng nhập thất bại
 
         cursor.close()
         conn.close()
 
     except mysql.connector.Error as e:
-        messagebox.showerror("Lỗi kết nối CSDL", f"Lỗi: {e}")
+        return False  # Trả về False nếu có lỗi kết nối

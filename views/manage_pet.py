@@ -1,131 +1,187 @@
-# manage_pet.py
+import customtkinter as ctk
+from models.manage_pet_model import PetModel
+from tkinter import messagebox
+from tkinter.ttk import Treeview
+import controllers.manage_pet_controller as pet_controller
 
-from customtkinter import *
-from PIL import Image
-from tkinter import ttk
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from controllers.manage_pet_controller import add_pet, delete_pet, update_pet, search_pets, get_all_pets
+def open_manage_pet_content(frame):
+    # Khởi tạo Controller để giao tiếp với tầng logic
+    pet_controller_instance = pet_controller.ManagePetController()
 
-def setup_treeview(parent):
-    """Hàm tạo và cấu hình Treeview trong giao diện"""
-    style = ttk.Style()
-    style.configure("Treeview", font=('Arial', 14))
-    style.configure("Treeview.Heading", font=('Arial', 16, 'bold'))
+    # Tiêu đề
+    title_label = ctk.CTkLabel(frame, text="Quản lý Thú cưng", font=("Arial", 18, "bold"))
+    title_label.pack(pady=10)
 
-    treeFrame = CTkFrame(parent, fg_color='#161C30')
-    treeFrame.grid(row=1, column=0, columnspan=7, pady=10, sticky="nsew")
+    # Frame chính chứa toàn bộ nội dung
+    content_frame = ctk.CTkFrame(frame)
+    content_frame.pack(pady=10, padx=10, fill="both", expand=True)
 
-    tree = ttk.Treeview(treeFrame, height=20)
-    tree.grid(row=0, column=0, sticky="nsew")
+    # Frame bên trái: Ô nhập liệu
+    input_frame = ctk.CTkFrame(content_frame, width=300)
+    input_frame.pack(side="left", padx=10, pady=5, fill="y")
 
-    # Cấu hình các cột
-    columns = ["col_id", "col_ten", "col_loai", "col_tuoi", "col_gioitinh", "col_idchu"]
-    headers = ["ID vật nuôi", "Tên vật nuôi", "Loài", "Tuổi", "Giới tính", "ID chủ vật nuôi"]
-    
-    tree["columns"] = columns
-    tree.column("#0", width=0, stretch=False)
-    tree.heading("#0", text="")
+    # Sắp xếp các ô nhập liệu dọc
+    ctk.CTkLabel(input_frame, text="ID vật nuôi:", font=("Arial", 12)).pack(pady=5, anchor="w")
+    pet_id_entry = ctk.CTkEntry(input_frame, width=250)
+    pet_id_entry.pack(pady=5)
 
-    for col, header in zip(columns, headers):
-        tree.heading(col, text=header)
-        tree.column(col, anchor="center", width=120 if col != "col_ten" else 250)
+    ctk.CTkLabel(input_frame, text="Tên vật nuôi:", font=("Arial", 12)).pack(pady=5, anchor="w")
+    pet_name_entry = ctk.CTkEntry(input_frame, width=250)
+    pet_name_entry.pack(pady=5)
 
-    # Thêm scrollbar
-    scrollbar = ttk.Scrollbar(treeFrame, orient=VERTICAL, command=tree.yview)
-    scrollbar.grid(row=0, column=1, sticky="ns")
-    tree.configure(yscrollcommand=scrollbar.set)
+    ctk.CTkLabel(input_frame, text="Loài:", font=("Arial", 12)).pack(pady=5, anchor="w")
+    pet_species_entry = ctk.CTkEntry(input_frame, width=250)
+    pet_species_entry.pack(pady=5)
 
-    return tree
+    ctk.CTkLabel(input_frame, text="Tuổi:", font=("Arial", 12)).pack(pady=5, anchor="w")
+    pet_age_entry = ctk.CTkEntry(input_frame, width=250)
+    pet_age_entry.pack(pady=5)
 
+    ctk.CTkLabel(input_frame, text="Giới tính:", font=("Arial", 12)).pack(pady=5, anchor="w")
+    pet_gender_entry = ctk.CTkComboBox(input_frame, values=["Male", "Female"], width=250)
+    pet_gender_entry.pack(pady=5)
 
-def open_manage_pet():
-    window = CTkToplevel()  # Tạo cửa sổ con mới
-    window.geometry('930x580')
-    window.resizable(False, False)
-    window.title('Quản lý vật nuôi')
-    window.configure(fg_color='#161C30')
+    ctk.CTkLabel(input_frame, text="ID chủ vật nuôi:", font=("Arial", 12)).pack(pady=5, anchor="w")
+    owner_id_entry = ctk.CTkEntry(input_frame, width=250)
+    owner_id_entry.pack(pady=5)
 
-    # Logo
-    try:
-        logo = CTkImage(Image.open('./image/logo6.jpeg'), size=(930, 158))
-    except Exception as e:
-        print(f"Lỗi khi tải hình ảnh: {e}")
-        return
+    # Frame bên phải: Chứa bảng và nút chức năng
+    right_frame = ctk.CTkFrame(content_frame)
+    right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=5)
 
-    CTkLabel(window, image=logo, text='').grid(row=0, column=0, columnspan=2)
+    # Frame cho bảng hiển thị danh sách thú cưng
+    table_frame = ctk.CTkFrame(right_frame)
+    table_frame.pack(fill="both", expand=True, pady=5)
 
-    # Left Frame - Form nhập liệu
-    leftFrame = CTkFrame(window, fg_color='#161C30')
-    leftFrame.grid(row=1, column=0, padx=10, pady=10, sticky="nw")
+    # Tạo bảng với Treeview
+    columns = ("id", "ten", "loai", "tuoi", "gioi_tinh", "id_chu_so_huu")
+    tree = Treeview(table_frame, columns=columns, show="headings", height=15)
+    tree.heading("id", text="ID")
+    tree.heading("ten", text="Tên")
+    tree.heading("loai", text="Loài")
+    tree.heading("tuoi", text="Tuổi")
+    tree.heading("gioi_tinh", text="Giới tính")
+    tree.heading("id_chu_so_huu", text="ID Chủ")
 
-    labels = ["ID vật nuôi", "Tên vật nuôi", "Loài", "Tuổi", "Giới tính", "ID chủ vật nuôi"]
-    entries = {}
+    # Đặt chiều rộng cho các cột
+    tree.column("id", width=80)
+    tree.column("ten", width=150)
+    tree.column("loai", width=150)
+    tree.column("tuoi", width=80)
+    tree.column("gioi_tinh", width=100)
+    tree.column("id_chu_so_huu", width=120)
+    tree.pack(fill="both", expand=True)
 
-    for i, label in enumerate(labels):
-        CTkLabel(leftFrame, text=label, font=('Arial', 18, 'bold')).grid(row=i, column=0, padx=20, pady=10)
-        
-        if label == "Giới tính":
-            entries[label] = CTkComboBox(leftFrame, values=["Đực", "Cái"], width=140)
-        else:
-            entries[label] = CTkEntry(leftFrame, font=('Arial', 15), width=140)
-        
-        entries[label].grid(row=i, column=1, pady=5)
+    # Frame cho các nút chức năng (dưới bảng)
+    button_frame = ctk.CTkFrame(right_frame)
+    button_frame.pack(fill="x", padx=10, pady=5)
 
-    # Right Frame - Treeview và tìm kiếm
-    rightFrame = CTkFrame(window, fg_color='#161C30')
-    rightFrame.grid(row=1, column=1, padx=10, pady=10, sticky="ne")
+    # Sắp xếp các nút nằm ngang dưới bảng
+    add_button = ctk.CTkButton(button_frame, text="Add Pet", command=lambda: add_pet_handler(pet_controller_instance), width=120)
+    add_button.pack(side="left", padx=5)
 
-    search_options = ["id", "ten", "loai", "tuoi", "gioi_tinh", "id_chu"]
-    searchbox = CTkComboBox(rightFrame, values=search_options, width=140)
-    searchbox.set("Tìm kiếm theo")
-    searchbox.grid(row=0, column=0)
+    update_button = ctk.CTkButton(button_frame, text="Update Pet", command=lambda: update_pet_handler(pet_controller_instance), width=120)
+    update_button.pack(side="left", padx=5)
 
-    searchEntry = CTkEntry(rightFrame, width=140, placeholder_text="Nhập từ khóa...")
-    searchEntry.grid(row=0, column=1, padx=5)
+    delete_button = ctk.CTkButton(button_frame, text="Delete Pet", command=lambda: delete_pet_handler(pet_controller_instance), width=120)
+    delete_button.pack(side="left", padx=5)
 
-    CTkButton(rightFrame, text='Tìm kiếm', width=80, command=lambda: on_search(tree, searchbox.get(), searchEntry.get())).grid(row=0, column=2, padx=5)
-    CTkButton(rightFrame, text='Show all', width=80, command=lambda: show_all(tree)).grid(row=0, column=3, padx=5)
+    search_button = ctk.CTkButton(button_frame, text="Search", command=lambda: search_pet_handler(pet_controller_instance), width=120)
+    search_button.pack(side="left", padx=5)
 
-    # Treeview
-    tree = setup_treeview(rightFrame)
+    delete_all_button = ctk.CTkButton(button_frame, text="Delete All", command=lambda: delete_all_handler(pet_controller_instance), width=120)
+    delete_all_button.pack(side="left", padx=5)
 
-    # Button Frame - Các chức năng
-    buttonFrame = CTkFrame(window, fg_color='#161C30')
-    buttonFrame.grid(row=2, column=0, columnspan=2, pady=10)
+    # Hàm tải danh sách thú cưng
+    def load_pets(pets=None):
+        for item in tree.get_children():
+            tree.delete(item)
+        if pets is None:
+            pets = pet_controller_instance.get_all_pets()
+        for pet in pets:
+            tree.insert("", "end", values=pet)
 
-    buttons = ["Thêm mới", "Sửa", "Xoá"]
-    button_commands = [lambda: on_add(entries, tree), lambda: on_update(entries, tree), lambda: on_delete(tree)]
-    for i, (text, command) in enumerate(zip(buttons, button_commands)):
-        CTkButton(buttonFrame, text=text, font=('Arial', 15, 'bold'), width=160, command=command).grid(row=0, column=i, padx=10, pady=5)
+    # Hàm xử lý khi chọn một dòng trong bảng
+    def on_tree_select(event):
+        selected_item = tree.selection()
+        if selected_item:
+            item = tree.item(selected_item[0])["values"]
+            pet_id_entry.delete(0, ctk.END)
+            pet_name_entry.delete(0, ctk.END)
+            pet_species_entry.delete(0, ctk.END)
+            pet_age_entry.delete(0, ctk.END)
+            pet_gender_entry.set("")
+            owner_id_entry.delete(0, ctk.END)
 
-    window.mainloop()
+            pet_id_entry.insert(0, item[0])
+            pet_name_entry.insert(0, item[1])
+            pet_species_entry.insert(0, item[2])
+            pet_age_entry.insert(0, item[3])
+            pet_gender_entry.set(item[4])
+            owner_id_entry.insert(0, item[5])
 
-def on_add(entries, tree):
-    pet = {label: entry.get() for label, entry in entries.items()}
-    add_pet(pet)
-    refresh_tree(tree)
+    tree.bind("<<TreeviewSelect>>", on_tree_select)
 
-def on_update(entries, tree):
-    pet = {label: entry.get() for label, entry in entries.items()}
-    update_pet(pet)
-    refresh_tree(tree)
+    # Hàm thêm thú cưng
+    def add_pet_handler(controller):
+        pet_data = {
+            "ID vật nuôi": pet_id_entry.get(),
+            "Tên vật nuôi": pet_name_entry.get(),
+            "Loài": pet_species_entry.get(),
+            "Tuổi": pet_age_entry.get(),
+            "Giới tính": pet_gender_entry.get(),
+            "ID chủ vật nuôi": owner_id_entry.get()
+        }
+        controller.add_pet(pet_data)
+        load_pets()
+        clear_form()
 
-def on_delete(tree):
-    selected_item = tree.selection()[0]
-    pet_id = tree.item(selected_item, "values")[0]
-    delete_pet(pet_id)
-    refresh_tree(tree)
+    # Hàm xóa thú cưng
+    def delete_pet_handler(controller):
+        pet_id = pet_id_entry.get()
+        controller.delete_pet(pet_id)
+        load_pets()
+        clear_form()
 
-def on_search(tree, field, keyword):
-    results = search_pets(keyword, field)
-    refresh_tree(tree, results)
+    # Hàm sửa thú cưng
+    def update_pet_handler(controller):
+        pet_data = {
+            "ID vật nuôi": pet_id_entry.get(),
+            "Tên vật nuôi": pet_name_entry.get(),
+            "Loài": pet_species_entry.get(),
+            "Tuổi": pet_age_entry.get(),
+            "Giới tính": pet_gender_entry.get(),
+            "ID chủ vật nuôi": owner_id_entry.get()
+        }
+        controller.update_pet(pet_data)
+        load_pets()
+        clear_form()
 
-def show_all(tree):
-    pets = get_all_pets()
-    refresh_tree(tree, pets)
+    # Hàm tìm kiếm
+    def search_pet_handler(controller):
+        keyword = pet_id_entry.get()
+        field = "id"
+        pets = controller.search_pets(keyword, field)
+        if pets:
+            load_pets(pets)
 
-def refresh_tree(tree, pets=None):
-    if pets is None:
-        pets = get_all_pets()
+    # Hàm xóa tất cả
+    def delete_all_handler(controller):
+        controller.delete_all_pets()
+        load_pets()
+        clear_form()
+
+    # Hàm xóa nội dung form
+    def clear_form():
+        pet_id_entry.delete(0, ctk.END)
+        pet_name_entry.delete(0, ctk.END)
+        pet_species_entry.delete(0, ctk.END)
+        pet_age_entry.delete(0, ctk.END)
+        pet_gender_entry.set("")
+        owner_id_entry.delete(0, ctk.END)
+
+    # Nút quay lại
+    back_button = ctk.CTkButton(frame, text="Quay lại", command=lambda: __import__('views.main_view').set_content(__import__('views.main_view').show_home_content))
+    back_button.pack(pady=10)
+
+    load_pets()
