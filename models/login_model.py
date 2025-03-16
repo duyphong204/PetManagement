@@ -1,18 +1,21 @@
-from controllers.login_controller import login
-from tkinter import messagebox
+import mysql.connector
+from utils.connect_dtb import connect_db
 
 class LoginModel:
     def validate_login_data(self, username, password):
-        """Kiểm tra dữ liệu đăng nhập trước khi gọi tầng dữ liệu"""
-        if username == '' or password == '':
-            messagebox.showerror("Lỗi", "Tên đăng nhập hoặc mật khẩu không được để trống!")
-            return False
-        # Thêm các kiểm tra khác nếu cần (ví dụ: độ dài mật khẩu, ký tự đặc biệt, v.v.)
-        return True
+        if not username or not password:
+            return False, "Tên đăng nhập hoặc mật khẩu không được để trống!"
+        return True, ""
 
-    def login(self, username, password, root, open_main_callback):
-        """Xử lý đăng nhập"""
-        if self.validate_login_data(username, password):
-            # Gọi tầng dữ liệu để kiểm tra thông tin đăng nhập
-            return login(username, password, root, open_main_callback)
-        return False
+    def check_credentials(self, username, password):
+        try:
+            conn = connect_db()
+            cursor = conn.cursor()
+            query = "SELECT * FROM nguoi_dung WHERE username = %s AND password = %s"
+            cursor.execute(query, (username, password))
+            user = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            return user is not None, ""
+        except mysql.connector.Error as e:
+            return False, f"Lỗi kết nối CSDL: {e}"

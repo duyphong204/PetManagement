@@ -1,15 +1,15 @@
 import customtkinter as ctk
 from models.manage_pet_model import PetModel
 from tkinter import messagebox
-from tkinter.ttk import Treeview
+from tkinter.ttk import Treeview, Style
 import controllers.manage_pet_controller as pet_controller
 
 def open_manage_pet_content(frame):
-    # Khởi tạo Controller để giao tiếp với tầng logic
+    # Khởi tạo Controller
     pet_controller_instance = pet_controller.ManagePetController()
 
     # Tiêu đề
-    title_label = ctk.CTkLabel(frame, text="Quản lý Thú cưng", font=("Arial", 18, "bold"))
+    title_label = ctk.CTkLabel(frame, text="Quản lý Thú cưng", font=("Arial", 18, "bold"), text_color="black")
     title_label.pack(pady=10)
 
     # Frame chính chứa toàn bộ nội dung
@@ -17,171 +17,134 @@ def open_manage_pet_content(frame):
     content_frame.pack(pady=10, padx=10, fill="both", expand=True)
 
     # Frame bên trái: Ô nhập liệu
-    input_frame = ctk.CTkFrame(content_frame, width=300)
+    input_frame = ctk.CTkFrame(content_frame, width=200)
     input_frame.pack(side="left", padx=10, pady=5, fill="y")
 
-    # Sắp xếp các ô nhập liệu dọc
-    ctk.CTkLabel(input_frame, text="ID vật nuôi:", font=("Arial", 12)).pack(pady=5, anchor="w")
-    pet_id_entry = ctk.CTkEntry(input_frame, width=250)
-    pet_id_entry.pack(pady=5)
-
-    ctk.CTkLabel(input_frame, text="Tên vật nuôi:", font=("Arial", 12)).pack(pady=5, anchor="w")
-    pet_name_entry = ctk.CTkEntry(input_frame, width=250)
-    pet_name_entry.pack(pady=5)
-
-    ctk.CTkLabel(input_frame, text="Loài:", font=("Arial", 12)).pack(pady=5, anchor="w")
-    pet_species_entry = ctk.CTkEntry(input_frame, width=250)
-    pet_species_entry.pack(pady=5)
-
-    ctk.CTkLabel(input_frame, text="Tuổi:", font=("Arial", 12)).pack(pady=5, anchor="w")
-    pet_age_entry = ctk.CTkEntry(input_frame, width=250)
-    pet_age_entry.pack(pady=5)
-
-    ctk.CTkLabel(input_frame, text="Giới tính:", font=("Arial", 12)).pack(pady=5, anchor="w")
-    pet_gender_entry = ctk.CTkComboBox(input_frame, values=["Male", "Female"], width=250)
-    pet_gender_entry.pack(pady=5)
-
-    ctk.CTkLabel(input_frame, text="ID chủ vật nuôi:", font=("Arial", 12)).pack(pady=5, anchor="w")
-    owner_id_entry = ctk.CTkEntry(input_frame, width=250)
-    owner_id_entry.pack(pady=5)
+    # Các ô nhập liệu
+    entries = {}
+    fields = ["ID vật nuôi", "Tên vật nuôi", "Loài", "Tuổi", "Giới tính", "ID chủ vật nuôi"]
+    for field in fields:
+        ctk.CTkLabel(input_frame, text=f"{field}:", font=("Arial", 12)).pack(pady=5, anchor="w")
+        if field == "Giới tính":
+            entry = ctk.CTkComboBox(input_frame, values=["Male", "Female"], width=250)
+        else:
+            entry = ctk.CTkEntry(input_frame, width=250)
+        entry.pack(pady=5)
+        entries[field] = entry
 
     # Frame bên phải: Chứa bảng và nút chức năng
     right_frame = ctk.CTkFrame(content_frame)
     right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=5)
 
-    # Frame cho bảng hiển thị danh sách thú cưng
+    # Frame cho bảng
     table_frame = ctk.CTkFrame(right_frame)
     table_frame.pack(fill="both", expand=True, pady=5)
 
+    # Tạo và cấu hình Style cho Treeview
+    style = Style()
+    style.configure("Treeview.Heading", font=("Arial", 16, "bold"))
+    style.configure("Treeview", font=("Arial", 14))
+
     # Tạo bảng với Treeview
     columns = ("id", "ten", "loai", "tuoi", "gioi_tinh", "id_chu_so_huu")
-    tree = Treeview(table_frame, columns=columns, show="headings", height=15)
-    tree.heading("id", text="ID")
-    tree.heading("ten", text="Tên")
-    tree.heading("loai", text="Loài")
-    tree.heading("tuoi", text="Tuổi")
-    tree.heading("gioi_tinh", text="Giới tính")
-    tree.heading("id_chu_so_huu", text="ID Chủ")
-
-    # Đặt chiều rộng cho các cột
-    tree.column("id", width=80)
-    tree.column("ten", width=150)
-    tree.column("loai", width=150)
-    tree.column("tuoi", width=80)
-    tree.column("gioi_tinh", width=100)
-    tree.column("id_chu_so_huu", width=120)
+    tree = Treeview(table_frame, columns=columns, show="headings", height=15, style="Treeview")
+    for col, text in zip(columns, ["ID", "Tên", "Loài", "Tuổi", "Giới tính", "ID Chủ"]):
+        tree.heading(col, text=text)
+    tree.column("id", width=120)
+    tree.column("ten", width=200)
+    tree.column("loai", width=200)
+    tree.column("tuoi", width=120)
+    tree.column("gioi_tinh", width=140)
+    tree.column("id_chu_so_huu", width=160)
     tree.pack(fill="both", expand=True)
 
-    # Frame cho các nút chức năng (dưới bảng)
+    # Frame cho các nút chức năng
     button_frame = ctk.CTkFrame(right_frame)
     button_frame.pack(fill="x", padx=10, pady=5)
 
-    # Sắp xếp các nút nằm ngang dưới bảng
-    add_button = ctk.CTkButton(button_frame, text="Add Pet", command=lambda: add_pet_handler(pet_controller_instance), width=120)
-    add_button.pack(side="left", padx=5)
-
-    update_button = ctk.CTkButton(button_frame, text="Update Pet", command=lambda: update_pet_handler(pet_controller_instance), width=120)
-    update_button.pack(side="left", padx=5)
-
-    delete_button = ctk.CTkButton(button_frame, text="Delete Pet", command=lambda: delete_pet_handler(pet_controller_instance), width=120)
-    delete_button.pack(side="left", padx=5)
-
-    search_button = ctk.CTkButton(button_frame, text="Search", command=lambda: search_pet_handler(pet_controller_instance), width=120)
-    search_button.pack(side="left", padx=5)
-
-    delete_all_button = ctk.CTkButton(button_frame, text="Delete All", command=lambda: delete_all_handler(pet_controller_instance), width=120)
-    delete_all_button.pack(side="left", padx=5)
-
-    # Hàm tải danh sách thú cưng
-    def load_pets(pets=None):
+    # Hàm hiển thị dữ liệu lên bảng
+    def display_pets(pets):
         for item in tree.get_children():
             tree.delete(item)
-        if pets is None:
-            pets = pet_controller_instance.get_all_pets()
-        for pet in pets:
-            tree.insert("", "end", values=pet)
+        if pets:
+            for pet in pets:
+                if len(pet) == 6:
+                    tree.insert("", "end", values=pet)
+        else:
+            messagebox.showinfo("Thông báo", "Không có dữ liệu để hiển thị.")
+
+    # Hàm xóa nội dung form
+    def clear_form():
+        for field, entry in entries.items():
+            if field == "Giới tính":
+                entry.set("")
+            else:
+                entry.delete(0, ctk.END)
 
     # Hàm xử lý khi chọn một dòng trong bảng
     def on_tree_select(event):
         selected_item = tree.selection()
         if selected_item:
             item = tree.item(selected_item[0])["values"]
-            pet_id_entry.delete(0, ctk.END)
-            pet_name_entry.delete(0, ctk.END)
-            pet_species_entry.delete(0, ctk.END)
-            pet_age_entry.delete(0, ctk.END)
-            pet_gender_entry.set("")
-            owner_id_entry.delete(0, ctk.END)
-
-            pet_id_entry.insert(0, item[0])
-            pet_name_entry.insert(0, item[1])
-            pet_species_entry.insert(0, item[2])
-            pet_age_entry.insert(0, item[3])
-            pet_gender_entry.set(item[4])
-            owner_id_entry.insert(0, item[5])
+            for i, (field, entry) in enumerate(entries.items()):
+                if field == "Giới tính":
+                    entry.set(item[i] if item[i] else "")
+                else:
+                    entry.delete(0, ctk.END)
+                    entry.insert(0, item[i] if item[i] else "")
 
     tree.bind("<<TreeviewSelect>>", on_tree_select)
 
-    # Hàm thêm thú cưng
-    def add_pet_handler(controller):
-        pet_data = {
-            "ID vật nuôi": pet_id_entry.get(),
-            "Tên vật nuôi": pet_name_entry.get(),
-            "Loài": pet_species_entry.get(),
-            "Tuổi": pet_age_entry.get(),
-            "Giới tính": pet_gender_entry.get(),
-            "ID chủ vật nuôi": owner_id_entry.get()
-        }
-        controller.add_pet(pet_data)
-        load_pets()
-        clear_form()
+    # Hàm xử lý chung cho các thao tác (Add, Update, Delete, Search)
+    def handle_action(action, success_message):
+        try:
+            pet_data = {field: entry.get() for field, entry in entries.items()}
+            
+            # Kiểm tra dữ liệu đầu vào
+            if action in ["add", "update"]:
+                # Kiểm tra tất cả các trường không được để trống
+                for field, value in pet_data.items():
+                    if not value:
+                        messagebox.showwarning("Cảnh báo", f"Vui lòng nhập {field} để {action == 'add' and 'thêm' or 'cập nhật'} thú cưng.")
+                        return
+            elif action in ["delete", "search"]:
+                # Chỉ kiểm tra ID không được để trống
+                pet_id = pet_data["ID vật nuôi"]
+                if not pet_id:
+                    messagebox.showwarning("Cảnh báo", f"Vui lòng nhập ID thú cưng để {action == 'delete' and 'xóa' or 'tìm kiếm'}.")
+                    return
 
-    # Hàm xóa thú cưng
-    def delete_pet_handler(controller):
-        pet_id = pet_id_entry.get()
-        controller.delete_pet(pet_id)
-        load_pets()
-        clear_form()
+            # Thực hiện hành động
+            if action == "add":
+                pet_controller_instance.add_pet(pet_data)
+            elif action == "update":
+                pet_controller_instance.update_pet(pet_data)
+            elif action == "delete":
+                pet_controller_instance.delete_pet(pet_data["ID vật nuôi"])
+            elif action == "search":
+                pets = pet_controller_instance.search_pets(pet_data["ID vật nuôi"], "id")
+                display_pets(pets)
+                if not pets:
+                    messagebox.showinfo("Thông báo", "Không tìm thấy thú cưng.")
+                return
 
-    # Hàm sửa thú cưng
-    def update_pet_handler(controller):
-        pet_data = {
-            "ID vật nuôi": pet_id_entry.get(),
-            "Tên vật nuôi": pet_name_entry.get(),
-            "Loài": pet_species_entry.get(),
-            "Tuổi": pet_age_entry.get(),
-            "Giới tính": pet_gender_entry.get(),
-            "ID chủ vật nuôi": owner_id_entry.get()
-        }
-        controller.update_pet(pet_data)
-        load_pets()
-        clear_form()
+            # Tải lại bảng sau khi thực hiện hành động
+            pets = pet_controller_instance.get_all_pets()
+            display_pets(pets)
+            clear_form()
+            messagebox.showinfo("Thành công", success_message)
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Lỗi khi {action == 'add' and 'thêm' or action == 'update' and 'cập nhật' or action == 'delete' and 'xóa' or 'tìm kiếm'} thú cưng: {e}")
 
-    # Hàm tìm kiếm
-    def search_pet_handler(controller):
-        keyword = pet_id_entry.get()
-        field = "id"
-        pets = controller.search_pets(keyword, field)
-        if pets:
-            load_pets(pets)
+    # Các nút chức năng
+    ctk.CTkButton(button_frame, text="Add Pet", command=lambda: handle_action("add", "Thêm thú cưng thành công!"), width=120).pack(side="left", padx=5)
+    ctk.CTkButton(button_frame, text="Update Pet", command=lambda: handle_action("update", "Cập nhật thú cưng thành công!"), width=120).pack(side="left", padx=5)
+    ctk.CTkButton(button_frame, text="Delete Pet", command=lambda: handle_action("delete", "Xóa thú cưng thành công!"), width=120).pack(side="left", padx=5)
+    ctk.CTkButton(button_frame, text="Search", command=lambda: handle_action("search", ""), width=120).pack(side="left", padx=5)
 
-    # Hàm xóa tất cả
-    def delete_all_handler(controller):
-        controller.delete_all_pets()
-        load_pets()
-        clear_form()
-
-    # Hàm xóa nội dung form
-    def clear_form():
-        pet_id_entry.delete(0, ctk.END)
-        pet_name_entry.delete(0, ctk.END)
-        pet_species_entry.delete(0, ctk.END)
-        pet_age_entry.delete(0, ctk.END)
-        pet_gender_entry.set("")
-        owner_id_entry.delete(0, ctk.END)
-
-    # Nút quay lại
-    back_button = ctk.CTkButton(frame, text="Quay lại", command=lambda: __import__('views.main_view').set_content(__import__('views.main_view').show_home_content))
-    back_button.pack(pady=10)
-
-    load_pets()
+    # Tải dữ liệu ban đầu
+    try:
+        pets = pet_controller_instance.get_all_pets()
+        display_pets(pets)
+    except Exception as e:
+        messagebox.showerror("Lỗi", f"Lỗi khi tải dữ liệu ban đầu: {e}")
