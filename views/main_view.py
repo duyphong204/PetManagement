@@ -3,6 +3,7 @@ import sys
 import os
 import views.manage_pet as manage_pet
 from controllers.manage_pet_controller import ManagePetController
+import views.camera_view as camera_view
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -40,7 +41,7 @@ def create_home_window(root):
         ("📅 Lịch hẹn khám", None),
         ("📊 Báo cáo", None),
         ("⚙️ Cài đặt", None),
-        ("📷 Camera", None),
+        ("📷 Camera", lambda: set_content(camera_view.show_camera_content)),
     ]
 
     for btn_text, command in buttons:
