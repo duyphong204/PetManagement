@@ -11,7 +11,7 @@ def main():
 
     # Tạo cửa sổ chính duy nhất
     root = ctk.CTk()
-    root.title("Đăng nhập hệ thống")
+    root.title("Đăng nhập hệ thống")  
     root.geometry("925x500+300+200")
     root.resizable(False, False)
 
