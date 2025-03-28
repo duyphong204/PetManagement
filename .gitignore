@@ -1,0 +1,21 @@
+# Bỏ qua toàn bộ thư mục dataset
+dataset/
+
+# Bỏ qua tất cả các file .zip
+*.zip
+
+# Bỏ qua model đã train
+models/*.keras
+models/*.h5
+
+# Bỏ qua cache của Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Bỏ qua thư mục haarcascades
+haarcascades/
+# Bỏ file cơ sở dữ liệu
+database/*.sql
+.git-backup/
