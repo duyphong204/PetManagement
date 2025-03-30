@@ -1,13 +1,18 @@
+# views/login_view.py
 import sys
 import os
 import customtkinter as ctk
 from PIL import Image
 from controllers.login_controller import LoginController
+import views.main_view as main_view
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def show_login_content(root, open_home_callback):
     login_controller = LoginController()
+
+    # Nhập register_view tại đây để tránh circular import
+    import views.register_view as register_view
 
     # Tạo frame chứa giao diện đăng nhập
     login_frame = ctk.CTkFrame(root, fg_color="#fff")
@@ -18,6 +23,12 @@ def show_login_content(root, open_home_callback):
         login_frame.destroy()
         # Gọi callback để hiển thị giao diện menu
         open_home_callback(root)
+
+    def switch_to_register():
+        # Xóa giao diện đăng nhập
+        login_frame.destroy()
+        # Hiển thị giao diện đăng ký, truyền root, callback để quay lại login và open_home_callback
+        register_view.show_register_content(root, show_login_content, open_home_callback)
 
     # Load hình ảnh logo với CTkImage
     try:
@@ -92,7 +103,9 @@ def show_login_content(root, open_home_callback):
         if pwd == "Password":
             pwd = ""
         success, message = login_controller.login(username, pwd, open_home)
-        if not success:
+        if success:
+            open_home()  # Chuyển sang giao diện chính khi thành công
+        else:
             error_label.configure(text=message)
 
     # Nút đăng nhập
@@ -112,7 +125,7 @@ def show_login_content(root, open_home_callback):
 
     sign_up = ctk.CTkButton(frame, width=60, text="Sign up",
                             fg_color="white", text_color="#57a1f8", font=("Microsoft YaHei UI Light", 9),
-                            hover=False, command=lambda: print("Chức năng đăng ký chưa được triển khai"))
+                            hover=False, command=switch_to_register)
     sign_up.place(x=215, y=270)
 
     return login_frame
