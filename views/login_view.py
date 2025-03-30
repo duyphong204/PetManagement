@@ -4,11 +4,11 @@ import os
 import customtkinter as ctk
 from PIL import Image
 from controllers.login_controller import LoginController
-import views.main_view as main_view
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def show_login_content(root, open_home_callback):
+    import views.main_view as main_view
     login_controller = LoginController()
 
     # Nhập register_view tại đây để tránh circular import

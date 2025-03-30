@@ -34,6 +34,15 @@ def create_home_window(root):
             widget.destroy()
         content_func(main_content)
 
+    # hàm đăng xuất
+    def logout():
+    # Xóa nội dung hiện tại của root
+        from views.login_view import show_login_content
+        for widget in root.winfo_children():
+            widget.destroy()
+    # Gọi giao diện đăng nhập, truyền root và callback để quay lại giao diện chính
+        show_login_content(root, create_home_window)
+
     # Danh sách nút menu
     buttons = [
         ("🏠 Trang chủ", lambda: set_content(show_home_content)),
@@ -42,6 +51,7 @@ def create_home_window(root):
         ("📊 Báo cáo", None),
         ("⚙️ Cài đặt", None),
         ("📷 Camera", lambda: set_content(camera_view.show_camera_content)),
+        ("🚪 Đăng xuất", logout),
     ]
 
     for btn_text, command in buttons:
