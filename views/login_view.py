@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def show_login_content(root, open_home_callback):
     import views.main_view as main_view
-    login_controller = LoginController()
+    login_controller = LoginController(root) #them root
 
     # Nhập register_view tại đây để tránh circular import
     import views.register_view as register_view
@@ -23,6 +23,8 @@ def show_login_content(root, open_home_callback):
         login_frame.destroy()
         # Gọi callback để hiển thị giao diện menu
         open_home_callback(root)
+    
+
 
     def switch_to_register():
         # Xóa giao diện đăng nhập
@@ -99,15 +101,16 @@ def show_login_content(root, open_home_callback):
         username = user.get().strip()
         pwd = password.get().strip()
         if username == "Username":
-            username = ""
+           username = ""
         if pwd == "Password":
-            pwd = ""
+           pwd = ""
         success, message = login_controller.login(username, pwd, open_home)
         if success:
             open_home()  # Chuyển sang giao diện chính khi thành công
         else:
-            error_label.configure(text=message)
-
+            error_label.configure(text=message) 
+ 
+  
     # Nút đăng nhập
     login_button = ctk.CTkButton(frame, width=295, height=40, text="Sign in",
                                  fg_color="#57a1f8", text_color="white", font=("Microsoft YaHei UI Light", 11),

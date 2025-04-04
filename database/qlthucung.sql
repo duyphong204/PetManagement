@@ -125,8 +125,8 @@ CREATE TABLE `nguoi_dung` (
 INSERT INTO `nguoi_dung` (`id`, `username`, `password`, `email`, `role`) VALUES
 (1, 'admin123', '12345', 'admin@example.com', 'admin'),
 (2, 'bacsi01', '12345', 'bacsi@example.com', 'bac_si'),
-(3, 'user01', '12345', 'user01@example.com', ''),
-(4, 'user02', '12345', 'user02@example.com', '');
+(3, 'user01', '12345', 'user01@example.com', 'khach_hang'),
+(4, 'user02', '12345', 'user02@example.com', 'khach_hang');
 
 -- --------------------------------------------------------
 
