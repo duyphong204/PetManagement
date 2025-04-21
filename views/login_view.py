@@ -1,4 +1,4 @@
-# views/login_view.py
+# import views/login_view.py
 import sys
 import os
 import customtkinter as ctk
@@ -104,9 +104,10 @@ def show_login_content(root, open_home_callback):
             pwd = ""
         success, message = login_controller.login(username, pwd, open_home)
         if success:
-            open_home()  # Chuyển sang giao diện chính khi thành công
+            open_home()  # Chuyển sang giao diện chính khi thành công và 
         else:
             error_label.configure(text=message)
+            
 
     # Nút đăng nhập
     login_button = ctk.CTkButton(frame, width=295, height=40, text="Sign in",

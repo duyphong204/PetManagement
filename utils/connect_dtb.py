@@ -6,7 +6,7 @@ def connect_db():
             host="localhost",
             user="root",
             password="",
-            database="qlthucung1"
+            database="qlthucung2"
         )
         if conn.is_connected():
             print("Kết nối MySQL thành công!")
