@@ -7,6 +7,7 @@ dataset/
 # Bỏ qua model đã train
 models/*.keras
 models/*.h5
+pet_env/
 
 # Bỏ qua cache của Python
 __pycache__/
