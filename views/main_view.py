@@ -26,7 +26,7 @@ def create_home_window(root):
     # Configure window
     root.title("Quản lý Phòng Khám Thú Y")
     root.geometry("1200x650")
-
+    root.state("zoomed")
     # Sidebar
     sidebar = ctk.CTkFrame(root, width=250, height=850, corner_radius=0)
     sidebar.pack(side="left", fill="y")
