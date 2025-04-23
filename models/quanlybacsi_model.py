@@ -131,6 +131,16 @@ class DoctorModel:
             cursor = self.connection.cursor()
             # Xử lý ID Người dùng
             id_nguoi_dung = self.process_id_nguoi_dung(doctor_data.get("ID Người Dùng"))
+            # Kiểm tra ID người dùng có tồn tại trong bảng nguoi_dung
+            if id_nguoi_dung is not None:
+                cursor = self.connection.cursor()
+                cursor.execute("SELECT COUNT(*) FROM nguoi_dung WHERE id = %s", (id_nguoi_dung,))
+                if cursor.fetchone()[0] == 0:
+                    messagebox.showerror("Lỗi", "ID Người dùng không tồn tại trong cơ sở dữ liệu")
+                    cursor.close()
+                    return False
+                cursor.close()
+
             if id_nguoi_dung is None:
                 id_nguoi_dung = None  # Nếu không có ID người dùng, cho phép NULL
 
@@ -176,7 +186,7 @@ class DoctorModel:
                     cursor.execute("SELECT COUNT(*) FROM nguoi_dung WHERE id = %s", (id_nguoi_dung,))
                     if cursor.fetchone()[0] == 0:
                         messagebox.showerror("Lỗi", "ID Người dùng không tồn tại trong cơ sở dữ liệu")
-                        return False  # Không đóng cursor ở đây, sẽ dùng finally
+                        return False  
 
                 sql = """
                 UPDATE bac_si
