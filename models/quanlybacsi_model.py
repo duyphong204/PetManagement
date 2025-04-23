@@ -9,7 +9,7 @@ class DoctorModel:
                 host="localhost",
                 user="root",
                 password="",  # Thay bằng mật khẩu của bạn nếu có
-                database="qlthucung1"
+                database="qlthucung2"
             )
             print("Kết nối CSDL thành công!")
         except mysql.connector.Error as e:
@@ -35,13 +35,13 @@ class DoctorModel:
             messagebox.showerror("Lỗi", "Chuyên môn chỉ được chứa chữ cái và dấu cách")
             return False
         
-        # Kiểm tra số điện thoại bắt đầu bằng "0" và có độ dài từ 8 đến 13 ký tự
+        # Kiểm tra số điện thoại bắt đầu bằng "0" và có độ dài từ 8 đến 11 ký tự
         phone_number = doctor_data.get("Số điện thoại")
         if not phone_number:
             messagebox.showerror("Lỗi", "Số điện thoại không được để trống")
             return False
-        if not phone_number.startswith("0") or not (8 <= len(phone_number) <= 13):
-            messagebox.showerror("Lỗi", "Số điện thoại phải bắt đầu bằng '0' và có độ dài từ 8-13 số")
+        if not phone_number.startswith("0") or not (8 <= len(phone_number) <= 11):
+            messagebox.showerror("Lỗi", "Số điện thoại phải bắt đầu bằng '0' và có độ dài từ 8-11 số")
             return False
         
         # Kiểm tra email có dấu "@" và "."
@@ -55,19 +55,30 @@ class DoctorModel:
 
         return True
 
-    def check_user_exists(self, user_id):
-        """ Kiểm tra ID người dùng có tồn tại trong bảng nguoi_dung không """
+    def check_doctor_exists(self, doctor_data, doctor_id=None):
+        """ Kiểm tra bác sĩ đã tồn tại trong cơ sở dữ liệu (trùng tên, số điện thoại hoặc email) """
         cursor = self.connection.cursor()
-        sql = "SELECT COUNT(*) FROM nguoi_dung WHERE id = %s"
-        try:
-            cursor.execute(sql, (user_id,))
-            result = cursor.fetchone()
-            return result[0] > 0  # Trả về True nếu tồn tại, False nếu không
-        except mysql.connector.Error as e:
-            messagebox.showerror("Lỗi", f"Lỗi khi kiểm tra người dùng: {e}")
-            return False
-        finally:
-            cursor.close()
+
+        # Kiểm tra trùng tên
+        sql_name = "SELECT id FROM bac_si WHERE ho_ten = %s"
+        cursor.execute(sql_name, (doctor_data["Họ tên"],))
+        if cursor.fetchone():
+            return "Tên bác sĩ đã tồn tại"
+
+        # Kiểm tra trùng số điện thoại
+        sql_phone = "SELECT id FROM bac_si WHERE so_dien_thoai = %s"
+        cursor.execute(sql_phone, (doctor_data["Số điện thoại"],))
+        if cursor.fetchone():
+            return "Số điện thoại bác sĩ đã tồn tại"
+
+        # Kiểm tra trùng email
+        sql_email = "SELECT id FROM bac_si WHERE email = %s"
+        cursor.execute(sql_email, (doctor_data["Email"],))
+        if cursor.fetchone():
+            return "Email bác sĩ đã tồn tại"
+
+        return None  # Nếu không có trùng lặp
+
 
     def process_id_nguoi_dung(self, id_value):
         """Chuyển đổi ID Người dùng thành số nguyên, nếu có."""
@@ -98,11 +109,38 @@ class DoctorModel:
         if not self.connection:
             messagebox.showerror("Lỗi", "Không thể kết nối CSDL!")
             return False
+
         if self.validate_doctor_data(doctor_data):
+            # Kiểm tra trùng lặp bác sĩ
+            error = self.check_doctor_exists(doctor_data)
+            if error:
+                messagebox.showerror("Lỗi", error)
+                return False
+
+            # Kiểm tra nếu ID Người dùng đã tồn tại trong bảng bac_si
+            id_nguoi_dung = doctor_data.get("ID Người Dùng")
+            if id_nguoi_dung:
+                cursor = self.connection.cursor()
+                cursor.execute("SELECT COUNT(*) FROM bac_si WHERE id_nguoi_dung = %s", (id_nguoi_dung,))
+                if cursor.fetchone()[0] > 0:
+                    messagebox.showerror("Lỗi", "ID Người dùng đã tồn tại trong bảng bác sĩ")
+                    cursor.close()
+                    return False
+                cursor.close()
+
             cursor = self.connection.cursor()
-            
             # Xử lý ID Người dùng
             id_nguoi_dung = self.process_id_nguoi_dung(doctor_data.get("ID Người Dùng"))
+            # Kiểm tra ID người dùng có tồn tại trong bảng nguoi_dung
+            if id_nguoi_dung is not None:
+                cursor = self.connection.cursor()
+                cursor.execute("SELECT COUNT(*) FROM nguoi_dung WHERE id = %s", (id_nguoi_dung,))
+                if cursor.fetchone()[0] == 0:
+                    messagebox.showerror("Lỗi", "ID Người dùng không tồn tại trong cơ sở dữ liệu")
+                    cursor.close()
+                    return False
+                cursor.close()
+
             if id_nguoi_dung is None:
                 id_nguoi_dung = None  # Nếu không có ID người dùng, cho phép NULL
 
@@ -144,11 +182,11 @@ class DoctorModel:
                 id_nguoi_dung = self.process_id_nguoi_dung(id_nguoi_dung_raw)
 
                 if id_nguoi_dung is not None:
-                # Kiểm tra ID người dùng có tồn tại không
+                    # Kiểm tra ID người dùng có tồn tại không
                     cursor.execute("SELECT COUNT(*) FROM nguoi_dung WHERE id = %s", (id_nguoi_dung,))
                     if cursor.fetchone()[0] == 0:
                         messagebox.showerror("Lỗi", "ID Người dùng không tồn tại trong cơ sở dữ liệu")
-                        return False  # Không đóng cursor ở đây, sẽ dùng finally
+                        return False  
 
                 sql = """
                 UPDATE bac_si
@@ -170,8 +208,6 @@ class DoctorModel:
                 return False
             finally:
                 cursor.close()
-
-
     def delete_doctor(self, doctor_id):
         """ Xóa bác sĩ khỏi cơ sở dữ liệu """
         if not self.connection:
