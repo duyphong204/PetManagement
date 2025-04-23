@@ -9,7 +9,7 @@ class DoctorModel:
                 host="localhost",
                 user="root",
                 password="",  # Thay bằng mật khẩu của bạn nếu có
-                database="qlthucung1"
+                database="qlthucung2"
             )
             print("Kết nối CSDL thành công!")
         except mysql.connector.Error as e:
@@ -35,7 +35,7 @@ class DoctorModel:
             messagebox.showerror("Lỗi", "Chuyên môn chỉ được chứa chữ cái và dấu cách")
             return False
         
-        # Kiểm tra số điện thoại bắt đầu bằng "0" và có độ dài từ 8 đến 13 ký tự
+        # Kiểm tra số điện thoại bắt đầu bằng "0" và có độ dài từ 8 đến 11 ký tự
         phone_number = doctor_data.get("Số điện thoại")
         if not phone_number:
             messagebox.showerror("Lỗi", "Số điện thoại không được để trống")

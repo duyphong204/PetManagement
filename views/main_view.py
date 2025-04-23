@@ -12,6 +12,7 @@ import views.quanlythuoc_view as quanlythuoc
 from views.manage_customer import open_manage_customer_content
 from views.medicine_warehouse import open_manage_medicine_content
 from views.KeDon_view import open_manage_prescription_content
+from views.nguoidung_view import open_manage_user_content
 
 def show_home_content(frame):
     label = ctk.CTkLabel(frame, text="Chào mừng đến với hệ thống!",
@@ -61,6 +62,7 @@ def create_home_window(root):
         (" Quản lý bác sĩ", lambda: set_content(manage_doctor.open_manage_doctor_content)),
         (" Quản lý thuốc", lambda: set_content(quanlythuoc.open_manage_drug_content)),
         ("👥 Quản lý Khách hàng", lambda: set_content(open_manage_customer_content)),
+        ("👥 Quản lý Người dùng", lambda: set_content(open_manage_user_content)),
         ("💊 Quản lý Kho Thuốc", lambda: set_content(open_manage_medicine_content)),
         ("📷 Camera", lambda: set_content(camera_view.show_camera_content)),
         ("📷 Kê Đơn", lambda: set_content(open_manage_prescription_content)),    
