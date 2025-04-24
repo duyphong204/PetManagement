@@ -1,6 +1,8 @@
 import customtkinter as ctk
 import sys
 import os
+# Tắt oneDNN để tránh cảnh báo
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import views.manage_pet as manage_pet
 from controllers.manage_pet_controller import ManagePetController

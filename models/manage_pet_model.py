@@ -9,7 +9,7 @@ class PetModel:
                 host="localhost",
                 user="root",
                 password="",  # Thay bằng mật khẩu của bạn nếu có
-                database="qlthucung1"
+                database="qlthucung2"
             )
             print("Kết nối CSDL thành công!")
         except mysql.connector.Error as e:

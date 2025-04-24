@@ -1,100 +1,295 @@
-import cv2
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.applications import VGG16
-from tensorflow.keras.applications.vgg16 import preprocess_input
-import mysql.connector
-import pickle
-import faiss
+import cv2
+import os
+from utils.connect_dtb import connect_db
 
-# Khởi tạo biến toàn cục
-model = None
-feature_model = None
-db = None
-cursor = None
-faiss_index = None
-pet_info = None
+class PetRecognizer:
+    def __init__(self):
+        # Đường dẫn đến các file mô hình
+        self.PET_MODEL_PATH = "models/pet_recognition.keras"
+        self.OWNER_MODEL_PATH = "models/owner_recognition_model_20250424_103623.keras"
+        self.OWNERS_LIST_PATH = "models/owners_list.txt"
 
-def initialize_model_and_db():
-    global model, feature_model, db, cursor, faiss_index, pet_info
-    try:
-        # Tải mô hình phân loại
-        if model is None:
-            model = tf.keras.models.load_model("models/pet_recognition_model.keras")
-        
-        # Tải mô hình VGG16 để trích xuất đặc trưng
-        if feature_model is None:
-            base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-            feature_model = tf.keras.Sequential([base_model, tf.keras.layers.GlobalAveragePooling2D()])
+        # Ánh xạ tên thư mục với ho_ten trong bảng chu_so_huu
+        self.OWNER_NAME_MAPPING = {
+            "Nguyen_Van_A": "Nguyễn Văn A",
+            "dang_phuc": "Đăng phúc",
+            "Duy_Phong": "Duy Phong",
+            "Huy_Hoang": "Nguyễn Huy Hoàng",
+        }
 
-        # Kết nối CSDL và xây dựng Faiss index
-        if db is None or cursor is None:
-            db = mysql.connector.connect(host="localhost", user="root", password="", database="qlthucung1")
-            cursor = db.cursor()
-            cursor.execute("SELECT id, ten_thu_cung, id_chu_so_huu, loai, feature_vector FROM thu_cung_metadata")
-            rows = cursor.fetchall()
+        # Giới hạn số luồng CPU
+        tf.config.threading.set_intra_op_parallelism_threads(2)
+        tf.config.threading.set_inter_op_parallelism_threads(2)
 
-            features, pet_info = [], []
-            for row in rows:
-                pet_id, ten_thu_cung, id_chu_so_huu, loai, feature_blob = row
-                if feature_blob:
-                    feature = pickle.loads(feature_blob)
-                    features.append(feature)
-                    pet_info.append((pet_id, ten_thu_cung, id_chu_so_huu, loai))
+        # Kiểm tra GPU
+        if not tf.config.list_physical_devices('GPU'):
+            print("Không tìm thấy GPU. Cân nhắc cài đặt tensorflow-gpu để tăng tốc độ dự đoán.")
 
-            if not features:
+        self.pet_model = None
+        self.owner_model = None
+        self.owners_list = None
+        self.db_connection = None
+
+    def initialize(self):
+        try:
+            self.owners_list = self._load_owners_list()
+            self.pet_model, self.owner_model = self._load_models()
+            self.db_connection = connect_db()
+            if self.db_connection and self.db_connection.is_connected():
+                return True
+            else:
+                print("Không thể kết nối đến cơ sở dữ liệu!")
                 return False
-            features = np.array(features, dtype=np.float32)
-            faiss_index = faiss.IndexFlatL2(features.shape[1])
-            faiss_index.add(features)
-        return True
-    except Exception as e:
-        print(f"Khởi tạo thất bại: {e}")
-        return False
+        except Exception as e:
+            print(f"Lỗi khởi tạo mô hình hoặc cơ sở dữ liệu: {e}")
+            return False
 
-def recognize_pet_from_image(img):
-    global model, cursor, faiss_index, pet_info
-    # Phân loại Dog/Cat
-    img_resized = cv2.resize(img, (224, 224)) / 255.0
-    prediction = model.predict(np.expand_dims(img_resized, axis=0))
-    confidence = float(prediction[0]) if prediction[0] > 0.5 else 1.0 - float(prediction[0])
-    label = "Dog" if prediction[0] > 0.5 else "Cat"
+    def close(self):
+        if self.db_connection and self.db_connection.is_connected():
+            self.db_connection.close()
+            self.db_connection = None
 
-    # Trích xuất đặc trưng
-    img_rgb = cv2.cvtColor(cv2.resize(img, (224, 224)), cv2.COLOR_BGR2RGB)
-    img_preprocessed = preprocess_input(np.expand_dims(img_rgb, axis=0))
-    input_feature = feature_model.predict(img_preprocessed).flatten()
-    if input_feature is None:
-        return label, f"{label}", "Lỗi trích xuất đặc trưng", confidence, float('inf'), "Không có thông tin lịch hẹn"
+    def _load_owners_list(self):
+        if not os.path.exists(self.OWNERS_LIST_PATH):
+            raise FileNotFoundError(f"Không tìm thấy file {self.OWNERS_LIST_PATH}")
+        with open(self.OWNERS_LIST_PATH, "r") as f:
+            owners = [line.strip() for line in f.readlines()]
+        return owners
 
-    # Tìm bản ghi khớp bằng Faiss
-    distances, indices = faiss_index.search(np.array([input_feature], dtype=np.float32), k=1)
-    min_distance, best_match_idx = distances[0][0], indices[0][0]
+    def _load_models(self):
+        try:
+            pet_model = tf.keras.models.load_model(self.PET_MODEL_PATH)
+        except Exception as e:
+            raise FileNotFoundError(f"Không thể tải pet_model từ {self.PET_MODEL_PATH}: {e}")
+        try:
+            owner_model = tf.keras.models.load_model(self.OWNER_MODEL_PATH)
+        except Exception as e:
+            raise FileNotFoundError(f"Không thể tải owner_model từ {self.OWNER_MODEL_PATH}: {e}")
+        return pet_model, owner_model
 
-    threshold = 1.0
-    if min_distance < threshold:
-        pet_id, ten_thu_cung, id_chu_so_huu, pet_loai = pet_info[best_match_idx]
-        if pet_loai.lower() != label.lower():
-            return label, f"{label}", "Không có thông tin về thú cưng này", confidence, min_distance, "Không có thông tin lịch hẹn"
+    def adjust_brightness_if_needed(self, image):
+        # Chuyển ảnh sang grayscale để tính độ sáng trung bình
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        brightness = np.mean(gray)
+        print(f"Độ sáng trung bình của ảnh: {brightness:.2f}")
+        
+        # Nếu ảnh quá tối (độ sáng trung bình < 50), tăng độ sáng
+        if brightness < 50:
+            alpha = 1.0
+            beta = 50  # Tăng độ sáng
+            image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+            print("Ảnh quá tối, đã tăng độ sáng.")
+        # Nếu ảnh quá sáng (độ sáng trung bình > 200), giảm độ sáng
+        elif brightness > 200:
+            alpha = 1.0
+            beta = -50  # Giảm độ sáng
+            image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+            print("Ảnh quá sáng, đã giảm độ sáng.")
+        
+        return image
 
-        # Truy vấn thông tin chủ
-        cursor.execute("SELECT ten_chu FROM chu_so_huu WHERE id = %s", (id_chu_so_huu,))
-        owner_name = cursor.fetchone()[0] if cursor.fetchone() else "Không có thông tin chủ"
+    def preprocess_image_for_pet(self, image):
+        # Kiểm tra và điều chỉnh độ sáng nếu cần
+        image = self.adjust_brightness_if_needed(image)
+        
+        # Chuyển sang RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Điều chỉnh độ sáng và độ tương phản (giảm giá trị để tránh thay đổi quá nhiều)
+        alpha = 1.2  # Độ tương phản (giảm từ 1.5 xuống 1.2)
+        beta = 20    # Độ sáng (giảm từ 50 xuống 20)
+        image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+        
+        # Đảm bảo giá trị pixel trong khoảng [0, 255]
+        image = np.clip(image, 0, 255)
+        
+        # Làm nét ảnh
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+        image = cv2.filter2D(image, -1, kernel)
+        
+        # Resize về kích thước phù hợp
+        image = cv2.resize(image, (224, 224))
+        image = image / 255.0
+        image = np.expand_dims(image, axis=0)
+        return image
 
-        # Truy vấn lịch hẹn
-        cursor.execute(
-            "SELECT ngay_hen, gio_hen, trang_thai FROM lich_hen WHERE id_thu_cung = %s AND trang_thai = 'approved' ORDER BY ngay_hen DESC LIMIT 1",
-            (pet_id,)
-        )
-        appointment = cursor.fetchone()
-        appointment_info = f"Lịch hẹn: {appointment[0]} {appointment[1]} ({appointment[2]})" if appointment else "Không có lịch hẹn"
-    else:
-        ten_thu_cung = f"{label}"
-        owner_name = "Không có thông tin về thú cưng này"
-        appointment_info = "Không có thông tin lịch hẹn"
+    def preprocess_image_for_owner(self, image):
+        # Kiểm tra và điều chỉnh độ sáng nếu cần
+        image = self.adjust_brightness_if_needed(image)
+        
+        # Chuyển sang RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Resize về kích thước phù hợp
+        image = cv2.resize(image, (128, 128))
+        image = image / 255.0
+        image = np.expand_dims(image, axis=0)
+        return image
 
-    return label, ten_thu_cung, owner_name, confidence, min_distance, appointment_info
+    def get_owner_and_pet_info(self, owner_dir_name, species):
+        owner_name = self.OWNER_NAME_MAPPING.get(owner_dir_name, "Không xác định")
+        if owner_name == "Không xác định":
+            return None, [], None
 
-def get_webcam_frame(cap):
-    ret, frame = cap.read()
-    return frame if ret else None
+        if not self.db_connection or not self.db_connection.is_connected():
+            return None, [], None
+
+        try:
+            cursor = self.db_connection.cursor(dictionary=True)
+            query_owner = """
+            SELECT id, ho_ten, so_dien_thoai, dia_chi
+            FROM chu_so_huu
+            WHERE ho_ten = %s
+            """
+            cursor.execute(query_owner, (owner_name,))
+            owner_info = cursor.fetchone()
+
+            if not owner_info:
+                cursor.close()
+                return None, [], None
+
+            query_pets = """
+            SELECT id, ten, loai, tuoi, gioi_tinh
+            FROM thu_cung
+            WHERE id_chu_so_huu = %s AND loai LIKE %s
+            """
+            species_pattern = f"%{species}%"
+            cursor.execute(query_pets, (owner_info['id'], species_pattern))
+            pets = cursor.fetchall()
+
+            pet_appointment = None
+            if pets:
+                pet_ids = [pet['id'] for pet in pets]
+                if pet_ids:
+                    if len(pet_ids) == 1:
+                        query_appointment = """
+                        SELECT lh.ngay_hen, lh.gio_hen, lh.trang_thai, tc.ten
+                        FROM lich_hen lh
+                        JOIN thu_cung tc ON lh.id_thu_cung = tc.id
+                        WHERE lh.id_thu_cung = %s
+                        ORDER BY lh.ngay_hen DESC, lh.gio_hen DESC
+                        LIMIT 1
+                        """
+                        cursor.execute(query_appointment, (pet_ids[0],))
+                    else:
+                        query_appointment = """
+                        SELECT lh.ngay_hen, lh.gio_hen, lh.trang_thai, tc.ten
+                        FROM lich_hen lh
+                        JOIN thu_cung tc ON lh.id_thu_cung = tc.id
+                        WHERE lh.id_thu_cung IN (%s)
+                        ORDER BY lh.ngay_hen DESC, lh.gio_hen DESC
+                        LIMIT 1
+                        """
+                        placeholders = ','.join(['%s'] * len(pet_ids))
+                        query_appointment = query_appointment % placeholders
+                        cursor.execute(query_appointment, pet_ids)
+                    pet_appointment = cursor.fetchone()
+
+            cursor.close()
+            return owner_info, pets, pet_appointment
+
+        except Exception as e:
+            print(f"Lỗi truy vấn CSDL: {e}")
+            return None, [], None
+
+    def recognize_pet_and_owner(self, image_path=None, frame=None):
+        if self.pet_model is None or self.owner_model is None or self.owners_list is None:
+            if not self.initialize():
+                raise RuntimeError("Không thể khởi tạo mô hình hoặc danh sách chủ")
+
+        if image_path:
+            image = cv2.imread(image_path)
+            if image is None:
+                raise ValueError(f"Không thể đọc ảnh từ {image_path}")
+        elif frame is not None:
+            image = frame
+        else:
+            raise ValueError("Cần cung cấp image_path hoặc frame")
+
+        pet_image = self.preprocess_image_for_pet(image)
+        owner_image = self.preprocess_image_for_owner(image)
+
+        # Dự đoán loài thú cưng (sửa phần này)
+        pet_prediction = self.pet_model.predict(pet_image)
+        pet_confidence = pet_prediction[0][0]  # Lấy giá trị sigmoid (0-1)
+        print(f"Pet prediction confidence: {pet_confidence:.2f}")
+        pet_label = "Mèo" if pet_confidence < 0.5 else "Chó"  # cat: 0, dog: 1
+
+        owner_prediction = self.owner_model.predict(owner_image)
+        owner_class = np.argmax(owner_prediction, axis=1)[0]
+        owner_confidence = np.max(owner_prediction)
+        print(f"Owner prediction confidence: {owner_confidence:.2f}")
+        owner_name = self.owners_list[owner_class] if owner_class < len(self.owners_list) else "Không xác định"
+
+        owner_info, pets, pet_appointment = self.get_owner_and_pet_info(owner_name, pet_label)
+
+        result = {
+            "species": pet_label,
+            "species_confidence": float(pet_confidence),
+            "owner_dir_name": owner_name,
+            "owner_confidence": float(owner_confidence),
+            "owner_info": owner_info if owner_info else {"ho_ten": "Không tìm thấy", "so_dien_thoai": "", "dia_chi": ""},
+            "pets": pets if pets else [],
+            "pet_appointment": pet_appointment if pet_appointment else None
+        }
+
+        return result
+    @staticmethod
+    def get_webcam_frame(cap):
+        ret, frame = cap.read()
+        if not ret:
+            return None
+        return frame
+
+    @staticmethod
+    def format_result_for_display(result):
+        species_text = f"Loài: {result['species']} (Confidence: {result['species_confidence']:.2f})"
+        owner_text = f"Chủ: {result['owner_info']['ho_ten']} (Confidence: {result['owner_confidence']:.2f})"
+        owner_details = f"SĐT: {result['owner_info']['so_dien_thoai']}, Địa chỉ: {result['owner_info']['dia_chi']}"
+        pet_text = "Thú cưng: "
+        if result['pets']:
+            pet_text += ", ".join([f"{pet['ten']} ({pet['loai']}, {pet['tuoi']} tuổi, {pet['gioi_tinh']})" for pet in result['pets']])
+        else:
+            pet_text += "Không tìm thấy"
+        if result['pet_appointment']:
+            appointment_time = f"{result['pet_appointment']['ngay_hen']} {result['pet_appointment']['gio_hen']}"
+            appointment_text = f"Lịch hẹn: {result['pet_appointment']['ten']} - {appointment_time} ({result['pet_appointment']['trang_thai']})"
+        else:
+            appointment_text = "Không có lịch hẹn"
+        return species_text, owner_text, owner_details, pet_text, appointment_text
+
+    def recognize_from_webcam(self):
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            raise ValueError("Không thể mở webcam")
+
+        try:
+            while True:
+                frame = self.get_webcam_frame(cap)
+                if frame is None:
+                    print("Không thể đọc frame từ webcam")
+                    break
+
+                result = self.recognize_pet_and_owner(frame=frame)
+                species_text, owner_text, owner_details, pet_text, appointment_text = self.format_result_for_display(result)
+
+                cv2.putText(frame, species_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, owner_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, owner_details, (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, pet_text, (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, appointment_text, (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+                cv2.imshow("Pet Recognition", frame)
+
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+        finally:
+            cap.release()
+            cv2.destroyAllWindows()
+            self.close()
+
+if __name__ == "__main__":
+    recognizer = PetRecognizer()
+    recognizer.recognize_from_webcam()
