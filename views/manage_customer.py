@@ -3,7 +3,7 @@ from models.manage_customer_model import CustomerModel
 from tkinter import messagebox
 from tkinter.ttk import Treeview
 import controllers.manage_customer_controller as customer_controller
-from tkcalendar import DateEntry
+
 
 
 def open_manage_customer_content(frame):
@@ -107,9 +107,12 @@ def open_manage_customer_content(frame):
             customer_address_entry.delete(0, ctk.END)
             user_id_entry.delete(0, ctk.END)
 
+            # Đảm bảo số điện thoại được xử lý dưới dạng chuỗi, không mất số 0
+            phone_number = str(item[2]).zfill(10)  # Nếu số điện thoại có ít hơn 10 chữ số, sẽ thêm số 0 vào đầu.
+
             customer_id_entry.insert(0, item[0])
             customer_name_entry.insert(0, item[1])
-            customer_phone_entry.insert(0, item[2])
+            customer_phone_entry.insert(0, phone_number)
             customer_email_entry.insert(0, item[3])
             customer_address_entry.insert(0, item[4])
             user_id_entry.insert(0, item[5])
@@ -158,15 +161,7 @@ def open_manage_customer_content(frame):
     search_entry = ctk.CTkEntry(search_frame, width=200, placeholder_text="Nhập từ khóa tìm kiếm...")
     search_entry.pack(side="left", padx=5)
 
-# Từ ngày
-    from_date_entry = DateEntry(search_frame, width=12, background='darkblue',
-                            foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
-    from_date_entry.pack(side="left", padx=5)
 
-# Đến ngày
-    to_date_entry = DateEntry(search_frame, width=12, background='darkblue',
-                          foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
-    to_date_entry.pack(side="left", padx=5)
     
 #Hiển thị danh sách khách hàng trong bảng.
     table_frame = ctk.CTkFrame(right_frame)

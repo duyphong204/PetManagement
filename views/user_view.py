@@ -6,6 +6,8 @@ import views.manage_pet as manage_pet
 from views.manage_customer import open_manage_customer_content
 from views.medicine_warehouse import open_manage_medicine_content
 from controllers.user_controller import UserController
+from utils.connect_dtb import connect_db
+from views.user_appointment_view import open_user_appointment_content
 
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -50,14 +52,7 @@ def open_user_dashboard(root, user_id):
     buttons = [
         ("🏠 Trang chủ", lambda: set_content(show_home_content)),
         ("📝 Thông tin cá nhân", lambda: set_content(lambda frame: show_user_info_content(frame, user_id))),
-        ("📅 Lịch hẹn khám", lambda: set_content(lambda frame: show_appointment_content(frame, user_id))),
-        #("🐶 Quản lý Thú cưng", lambda: set_content(manage_pet.open_manage_pet_content)),
-      #  ("👥 Quản lý Khách hàng", lambda: set_content(open_manage_customer_content)),
-       # ("💊 Quản lý Kho Thuốc", lambda: set_content(open_manage_medicine_content)),
-        #("📅 Lịch hẹn khám", None),
-      #  ("📊 Báo cáo", None),
-      #  ("⚙️ Cài đặt", None),
-      #  ("📷 Camera", lambda: set_content(camera_view.show_camera_content)),
+        ("📅 Đặt hẹn khám", lambda: set_content(lambda frame: open_user_appointment_content(frame, user_id, connect_db))),
         ("🚪 Đăng xuất", logout),
     ]
 
@@ -75,7 +70,7 @@ def open_user_dashboard(root, user_id):
   # Hiển thị thông tin người dùng
     def show_user_info_content(frame, user_id):
      
-        user_controller = UserController(db_config)
+        user_controller = UserController()
         user_info = user_controller.get_user_info(user_id)
 
         if user_info:
@@ -115,51 +110,7 @@ def open_user_dashboard(root, user_id):
                                        font=("Arial", 18, "bold"), text_color="red")
             error_label.pack(pady=30)
 
-  #Hiển thị các lịch hẹn
-    def show_appointment_content(frame, user_id):
-    
-        user_controller = UserController(db_config)
-        appointments = user_controller.get_appointments_info(user_id)
-
-        if appointments:
-            appointment_frame = ctk.CTkFrame(frame, fg_color="#f0f0f0", corner_radius=10, width=900, height=500)
-            appointment_frame.pack(pady=20, padx=20, fill="both", expand=True)
-
-            title = ctk.CTkLabel(appointment_frame, text="Lịch Hẹn Khám", font=("Arial", 20, "bold"), text_color="white", fg_color="#2C3E50", width=900)
-            title.pack(pady=20)
-
-            # Tạo frame chứa bảng lịch hẹn
-            table_frame = ctk.CTkFrame(appointment_frame, corner_radius=10, width=800, border_width=2, border_color="#cccccc")
-            table_frame.pack(pady=10, padx=20, fill="both", expand=True)
-
-            # Tiêu đề cột
-            headers = ['ID', 'Ngày hẹn', 'Giờ hẹn', 'ID thú cưng', 'ID bác sĩ', 'Trạng thái']
-            for i, header in enumerate(headers):
-                header_label = ctk.CTkLabel(table_frame, text=header, font=("Arial", 14, "bold"), width=150, anchor="w", padx=10)
-                header_label.grid(row=0, column=i, padx=10, pady=10, sticky="w")
-
-            # Lặp qua tất cả các lịch hẹn trong appointments
-            for row, appointment in enumerate(appointments, start=1):
-                # Dữ liệu cho mỗi lịch hẹn
-                appointment_data = [
-                    appointment['id'], 
-                    appointment['ngay_hen'], 
-                    appointment['gio_hen'],
-                    appointment['id_thu_cung'],
-                    appointment['id_bac_si'], 
-                    appointment['trang_thai'],     
-                ]
-
-                # Hiển thị dữ liệu lịch hẹn vào bảng
-                for col, data in enumerate(appointment_data):
-                    data_label = ctk.CTkLabel(table_frame, text=data, font=("Arial", 14), width=150, anchor="w", padx=10)
-                    data_label.grid(row=row, column=col, padx=10, pady=10, sticky="w")
-
-        else:
-            error_label = ctk.CTkLabel(frame, text="Không tìm thấy lịch hẹn !", 
-                                       font=("Arial", 18, "bold"), text_color="red")
-            error_label.pack(pady=30)
-    show_home_content(main_content)
+  
 
     return root
 
