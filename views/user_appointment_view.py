@@ -174,6 +174,40 @@ def open_user_appointment_content(frame, user_id, connect_db):
         else:
             messagebox.showerror("Lỗi", result["message"])
 
+    # ==== Xử lý khi chọn lịch hẹn trong Treeview ====
+    def on_treeview_select(event):
+     selected_item = treeview.selection()
+     if selected_item:
+        values = treeview.item(selected_item[0], "values")
+        appt_id, pet_id, doctor_id, ngay_hen, gio_hen, _ = values
+
+        # Đặt ngày hẹn
+        date_entry.set_date(ngay_hen)
+
+        # Tách giờ và phút từ định dạng HH:MM:SS
+        try:
+            gio, phut, *_ = gio_hen.split(":")
+            gio_combobox.set(gio)
+            phut_combobox.set(phut)
+        except:
+            gio_combobox.set("Giờ")
+            phut_combobox.set("Phút")
+
+        # Thiết lập lại chọn thú cưng
+        for pet in ds_thu_cung:
+            if str(pet["id"]) == str(pet_id):
+                pet_combobox.set(f"{pet['id']} - {pet['ten']} - {pet['loai']} - {pet['gioi_tinh']}")
+                break
+
+        # Thiết lập lại chọn bác sĩ
+        for bs in ds_bac_si:
+            if str(bs["id"]) == str(doctor_id):
+                doctor_combobox.set(f"{bs['id']} - {bs['ho_ten']}")
+                break
+
+
+    treeview.bind("<<TreeviewSelect>>", on_treeview_select)
+
     button_frame = ctk.CTkFrame(right_frame)
     button_frame.pack(fill="x", pady=5)
 
