@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import sys
 import os
+from PIL import Image
 # Tắt oneDNN để tránh cảnh báo
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -16,9 +17,21 @@ from views.medicine_warehouse import open_manage_medicine_content
 from views.KeDon_view import open_manage_prescription_content
 
 def show_home_content(frame):
-    label = ctk.CTkLabel(frame, text="Chào mừng đến với hệ thống!",
-                         font=("Arial", 18, "bold"), text_color="black")
-    label.pack(pady=30)
+    # Đường dẫn đến hình ảnh
+    image_path = os.path.join(os.path.dirname(__file__), '..', 'images', 'home2.jpg')
+    
+    # Kiểm tra xem file hình ảnh có tồn tại không
+    if not os.path.exists(image_path):
+        label = ctk.CTkLabel(frame, text="Không tìm thấy hình ảnh! Vui lòng thêm file home_image.jpg vào thư mục images/",
+                             font=("Arial", 14), text_color="red")
+        label.pack(pady=30)
+        return
+
+    # Tải và hiển thị hình ảnh
+    image = Image.open(image_path)
+    ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=(800, 600))  # Điều chỉnh kích thước hình ảnh
+    image_label = ctk.CTkLabel(frame, image=ctk_image, text="")  # text="" để không hiển thị chữ trên hình ảnh
+    image_label.pack(pady=30)
 
 def create_home_window(root):
     # Clear current content
@@ -29,8 +42,8 @@ def create_home_window(root):
     root.title("Quản lý Phòng Khám Thú Y")
     root.geometry("1200x650")
 
-    # Sidebar
-    sidebar = ctk.CTkFrame(root, width=250, height=850, corner_radius=0)
+    # Sidebar with scrollbar
+    sidebar = ctk.CTkScrollableFrame(root, width=250, height=650, corner_radius=0)
     sidebar.pack(side="left", fill="y")
     
     title_label = ctk.CTkLabel(sidebar, text="🐾 MENU", font=("Arial", 20, "bold"))

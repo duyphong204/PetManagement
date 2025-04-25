@@ -13,7 +13,7 @@ class PetRecognizer:
 
         # Ánh xạ tên thư mục với ho_ten trong bảng chu_so_huu
         self.OWNER_NAME_MAPPING = {
-            "Nguyen_Van_A": "Nguyễn Văn A",
+            "Nguyen_Van_A": "Nguyễn Văn Tiến",
             "dang_phuc": "Đăng phúc",
             "Duy_Phong": "Duy Phong",
             "Huy_Hoang": "Nguyễn Huy Hoàng",

@@ -27,7 +27,7 @@ def show_register_content(root, open_login_callback, open_home_callback):
 
     # Load hình ảnh logo với CTkImage (dùng cùng file ảnh login.png)
     try:
-        img = Image.open("image/login.png")
+        img = Image.open("images/login.png")
         img = img.resize((400, 400), Image.Resampling.LANCZOS)
         photo = ctk.CTkImage(light_image=img, dark_image=img, size=(400, 400))
     except Exception as e:
