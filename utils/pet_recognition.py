@@ -24,8 +24,8 @@ class PetRecognizer:
         tf.config.threading.set_inter_op_parallelism_threads(2)
 
         # Kiểm tra GPU
-        if not tf.config.list_physical_devices('GPU'):
-            print("Không tìm thấy GPU. Cân nhắc cài đặt tensorflow-gpu để tăng tốc độ dự đoán.")
+        # if not tf.config.list_physical_devices('GPU'):
+        #     print("Không tìm thấy GPU. Cân nhắc cài đặt tensorflow-gpu để tăng tốc độ dự đoán.")
 
         self.pet_model = None
         self.owner_model = None

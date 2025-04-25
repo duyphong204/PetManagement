@@ -1,3 +1,7 @@
+import os
+# Tắt cảnh báo TensorFlow
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import customtkinter as ctk
 import cv2
 from PIL import Image
@@ -32,14 +36,15 @@ def show_camera_content(frame):
             cap.release()
         return
 
-    is_running = True
+    # Gắn biến is_running vào video_label
+    video_label.is_running = True
 
     def update_frame():
-        if not is_running:
+        if not getattr(video_label, 'is_running', False):
             return
         frame = recognizer.get_webcam_frame(cap)
         if frame is not None:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Sửa lại dòng này
             frame = cv2.resize(frame, (320, 240))
             ctk_image = ctk.CTkImage(light_image=Image.fromarray(frame), size=(320, 240))
             video_label.configure(image=ctk_image)
@@ -75,12 +80,17 @@ def show_camera_content(frame):
             result_label.configure(text=f"Lỗi nhận diện: {str(e)}")
 
     def stop_webcam():
-        nonlocal is_running
-        is_running = False
+        # Dừng vòng lặp
+        video_label.is_running = False
+        # Giải phóng webcam
         if cap:
             cap.release()
-        video_label.configure(image=None)
-        result_label.configure(text="Webcam đã tắt.")
+        # Chỉ cập nhật giao diện nếu widget còn tồn tại
+        try:
+            video_label.configure(image=None)
+            result_label.configure(text="Webcam đã tắt.")
+        except:
+            pass  # Bỏ qua nếu widget đã bị hủy
         recognizer.close()
 
     # Tạo nút
@@ -88,5 +98,8 @@ def show_camera_content(frame):
                   fg_color="#34495E", hover_color="#2C3E50", command=recognize_pet).pack(pady=10)
     ctk.CTkButton(webcam_frame, text="Tắt Webcam", font=("Arial", 14), corner_radius=10, width=200, height=40,
                   fg_color="#C0392B", hover_color="#922B21", command=stop_webcam).pack(pady=10)
+
+    # Đăng ký hàm stop_webcam khi video_label bị hủy
+    video_label.bind("<Destroy>", lambda _: stop_webcam())
 
     update_frame()
