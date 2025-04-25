@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 from tkinter.ttk import Treeview
 import controllers.KeDon_controller as prescription_controller
+import re
 
 def open_manage_prescription_content(frame):
     # Khởi tạo Controller
@@ -139,32 +140,67 @@ def open_manage_prescription_content(frame):
     # Xử lý sự kiện khi người dùng chọn một dòng trong bảng
     def on_tree_select(event):
         selected_item = tree.selection()
-        if selected_item:
-            item = tree.item(selected_item[0])["values"]
-            appointment_id = item[1]
-            for display, appt_id in appointment_dict.items():
-                if appt_id == appointment_id:
-                    appointment_entry.set(display)
-                    break
-            danh_sach_thuoc = item[4]
-            parts = danh_sach_thuoc.split(",")
-            ten_thuoc = parts[0].strip()
-            quantity_part = parts[1].strip() if len(parts) > 1 else "1"
-            quantity = re.search(r'\d+', quantity_part).group()
-            duration_part = parts[2].strip() if len(parts) > 2 else ""
+        if not selected_item:
+            return
+        item = tree.item(selected_item[0])["values"]
+
+        # Lấy thông tin từ dòng được chọn
+        appointment_id = item[1]  # ID Lịch hẹn
+        danh_sach_thuoc = item[4]  # Danh sách thuốc
+        huong_dan = item[5]  # Hướng dẫn
+
+        # Xóa nội dung các ô trước khi điền mới
+        clear_form()
+
+        # Tìm và gán lịch hẹn
+        for display, appt_id in appointment_dict.items():
+            if appt_id == appointment_id:
+                appointment_entry.set(display)
+                break
+        else:
+            appointment_entry.set("")  # Nếu không tìm thấy lịch hẹn, để trống
+
+        # Tách thông tin từ danh_sach_thuoc
+        try:
+            # Tách chuỗi danh_sach_thuoc
+            parts = [part.strip() for part in danh_sach_thuoc.split(",")]
+            
+            # Xử lý trường hợp không đủ định dạng
+            ten_thuoc = parts[0]  # Tên thuốc luôn có
+            quantity = "1"  # Giá trị mặc định nếu không có số lượng
+            duration = ""   # Giá trị mặc định nếu không có thời gian sử dụng
+
+            if len(parts) >= 2:
+                # Lấy số lượng từ phần thứ 2 (ví dụ: "1 viên")
+                quantity_match = re.search(r'\d+', parts[1])
+                quantity = quantity_match.group() if quantity_match else "1"
+            if len(parts) >= 3:
+                # Lấy thời gian sử dụng từ phần thứ 3 (nếu có)
+                duration = parts[2]
+
+            # Tìm và gán tên thuốc vào Combobox
             for display in medicine_display:
-                if ten_thuoc in display:
+                if ten_thuoc == display.split(" (Số lượng:")[0]:
                     medicine_entry.set(display)
                     break
+            else:
+                medicine_entry.set("")  # Nếu không tìm thấy thuốc, để trống
+                messagebox.showwarning("Cảnh báo", f"Thuốc '{ten_thuoc}' không tìm thấy trong danh sách thuốc hiện tại")
+
+            # Điền các ô còn lại
             quantity_entry.delete(0, ctk.END)
             quantity_entry.insert(0, quantity)
             duration_entry.delete(0, ctk.END)
-            duration_entry.insert(0, duration_part)
+            duration_entry.insert(0, duration)
             instruction_entry.delete(0, ctk.END)
-            instruction_entry.insert(0, item[5] if item[5] else "")
+            instruction_entry.insert(0, huong_dan if huong_dan else "")
+
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể phân tích đơn thuốc: {e}. Dữ liệu: {danh_sach_thuoc}")
+            clear_form()
 
     # Tiêu đề
-    title_label = ctk.CTkLabel(frame, text="Quản lý Kê Đơn", font=("Arial", 18, "bold"))
+    title_label = ctk.CTkLabel(frame, text="Quản lý Kê Đơn", font=("Arial", 18, "bold"), text_color="black" )
     title_label.pack(pady=10)
 
     # Form nhập thông tin kê đơn
@@ -237,7 +273,7 @@ def open_manage_prescription_content(frame):
     button_frame = ctk.CTkFrame(right_frame)
     button_frame.pack(fill="x", padx=10, pady=5)
 
-    prescribe_button = ctk.CTkButton(button_frame, text="Thêm ", command=prescribe_handler, width=120)
+    prescribe_button = ctk.CTkButton(button_frame, text="Thêm", command=prescribe_handler, width=120)
     prescribe_button.pack(side="left", padx=5)
 
     edit_button = ctk.CTkButton(button_frame, text="Sửa", command=edit_prescription_handler, width=120)

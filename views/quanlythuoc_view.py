@@ -1,10 +1,9 @@
 import customtkinter as ctk
 from tkinter import messagebox
 from tkinter.ttk import Treeview
-from tkcalendar import DateEntry
 import controllers.quanlythuoc_controller as drug_controller
 
-def open_manage_drug_content(frame):
+def open_manage_drug_content(frame, id_kho_thuoc=None):
     # Khởi tạo Controller
     drug_controller_instance = drug_controller.DrugController()
 
@@ -21,16 +20,25 @@ def open_manage_drug_content(frame):
         for item in tree.get_children():
             tree.delete(item)
         if drugs is None:
-            drugs = drug_controller_instance.get_all_drugs()
+            if id_kho_thuoc is not None:
+                drugs = drug_controller_instance.get_drugs_by_kho_thuoc_id(id_kho_thuoc)
+            else:
+                drugs = drug_controller_instance.get_all_drugs()
         for drug in drugs:
             tree.insert("", "end", values=drug)
 
     # Xử lý thêm thuốc mới
     def add_drug_handler():
         drug_data = {field: entry.get() for field, entry in entries.items()}
-        drug_controller_instance.add_drug(drug_data)
-        load_drugs()
-        clear_form()
+        # Lấy id_kho_thuoc từ ten_thuoc được chọn
+        ten_thuoc = drug_data["Tên thuốc"]
+        kho_thuoc_id = drug_controller_instance.get_kho_thuoc_id_by_name(ten_thuoc)
+        if kho_thuoc_id is None:
+            return  # Đã hiển thị thông báo lỗi trong get_kho_thuoc_id_by_name
+        success = drug_controller_instance.add_drug(drug_data, kho_thuoc_id)
+        if success:
+            load_drugs()
+            clear_form()
 
     # Xử lý xóa thuốc
     def delete_drug_handler():
@@ -53,9 +61,15 @@ def open_manage_drug_content(frame):
             return
         drug_id = tree.item(selected_item[0])["values"][0]
         drug_data = {field: entry.get() for field, entry in entries.items()}
-        drug_controller_instance.update_drug(drug_id, drug_data)
-        load_drugs()
-        clear_form()
+        # Lấy id_kho_thuoc từ ten_thuoc được chọn
+        ten_thuoc = drug_data["Tên thuốc"]
+        kho_thuoc_id = drug_controller_instance.get_kho_thuoc_id_by_name(ten_thuoc)
+        if kho_thuoc_id is None:
+            return  # Đã hiển thị thông báo lỗi trong get_kho_thuoc_id_by_name
+        success = drug_controller_instance.update_drug(drug_id, drug_data, kho_thuoc_id)
+        if success:
+            load_drugs()
+            clear_form()
 
     # Xử lý tìm kiếm
     def search_drug_handler():
@@ -81,7 +95,7 @@ def open_manage_drug_content(frame):
                     entry.insert(0, value)
 
     # Tiêu đề
-    title_label = ctk.CTkLabel(frame, text="Quản lý Thuốc", font=("Arial", 18, "bold"))
+    title_label = ctk.CTkLabel(frame, text="Quản lý Thuốc", font=("Arial", 18, "bold"), text_color="black")
     title_label.pack(pady=10)
 
     # Form nhập thông tin thuốc
@@ -94,9 +108,14 @@ def open_manage_drug_content(frame):
     # Các ô nhập liệu
     entries = {}
     fields = ["Tên thuốc", "Loại thuốc", "Nhà sản xuất", "Giá"]
+
     for field in fields:
         ctk.CTkLabel(input_frame, text=f"{field}:", font=("Arial", 12)).pack(pady=5, anchor="w")
-        if field == "Loại thuốc":
+        if field == "Tên thuốc":
+            # Lấy danh sách tên thuốc từ kho_thuoc thông qua id_kho_thuoc
+            medicine_names = drug_controller_instance.get_medicine_names_by_kho_thuoc_id(id_kho_thuoc)
+            entry = ctk.CTkComboBox(input_frame, values=medicine_names, width=250)
+        elif field == "Loại thuốc":
             entry = ctk.CTkComboBox(input_frame, values=["Vắc-xin", "Kháng sinh", "Bổ sung", "Khác"], width=250)
         else:
             entry = ctk.CTkEntry(input_frame, width=250)
