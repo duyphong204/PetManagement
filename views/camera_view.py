@@ -36,25 +36,35 @@ def show_camera_content(frame):
             cap.release()
         return
 
-    # Gắn biến is_running vào video_label
+    # Gắn biến is_running và after_id vào video_label
     video_label.is_running = True
+    video_label.after_id = None
+    video_label.last_frame = None  # Lưu khung hình đã xử lý để tái sử dụng
 
     def update_frame():
         if not getattr(video_label, 'is_running', False):
             return
         frame = recognizer.get_webcam_frame(cap)
         if frame is not None:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Sửa lại dòng này
-            frame = cv2.resize(frame, (320, 240))
-            ctk_image = ctk.CTkImage(light_image=Image.fromarray(frame), size=(320, 240))
+            # Chuyển đổi màu và resize một lần
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_resized = cv2.resize(frame_rgb, (320, 240))
+            # Lưu khung hình để tái sử dụng trong recognize_pet
+            video_label.last_frame = frame
+            # Hiển thị khung hình
+            ctk_image = ctk.CTkImage(light_image=Image.fromarray(frame_resized), size=(320, 240))
             video_label.configure(image=ctk_image)
-        video_label.after(10, update_frame)
+        # Lưu ID của tác vụ after
+        video_label.after_id = video_label.after(10, update_frame)
 
     def recognize_pet():
-        frame = recognizer.get_webcam_frame(cap)
+        # Sử dụng khung hình đã lưu để tránh xử lý lại
+        frame = getattr(video_label, 'last_frame', None)
         if frame is None:
-            result_label.configure(text="Lỗi chụp ảnh! Vui lòng kiểm tra webcam.")
-            return
+            frame = recognizer.get_webcam_frame(cap)
+            if frame is None:
+                result_label.configure(text="Lỗi chụp ảnh! Vui lòng kiểm tra webcam.")
+                return
         
         try:
             result = recognizer.recognize_pet_and_owner(frame=frame)
@@ -82,6 +92,13 @@ def show_camera_content(frame):
     def stop_webcam():
         # Dừng vòng lặp
         video_label.is_running = False
+        # Hủy tác vụ after nếu có
+        if getattr(video_label, 'after_id', None):
+            try:
+                video_label.after_cancel(video_label.after_id)
+                video_label.after_id = None
+            except:
+                pass
         # Giải phóng webcam
         if cap:
             cap.release()

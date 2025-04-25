@@ -23,10 +23,6 @@ class PetRecognizer:
         tf.config.threading.set_intra_op_parallelism_threads(2)
         tf.config.threading.set_inter_op_parallelism_threads(2)
 
-        # Kiểm tra GPU
-        # if not tf.config.list_physical_devices('GPU'):
-        #     print("Không tìm thấy GPU. Cân nhắc cài đặt tensorflow-gpu để tăng tốc độ dự đoán.")
-
         self.pet_model = None
         self.owner_model = None
         self.owners_list = None
@@ -50,6 +46,12 @@ class PetRecognizer:
         if self.db_connection and self.db_connection.is_connected():
             self.db_connection.close()
             self.db_connection = None
+
+    def __del__(self):
+        # Giải phóng mô hình khi đối tượng bị hủy
+        self.pet_model = None
+        self.owner_model = None
+        self.close()
 
     def _load_owners_list(self):
         if not os.path.exists(self.OWNERS_LIST_PATH):
@@ -91,23 +93,19 @@ class PetRecognizer:
         return image
 
     def preprocess_image_for_pet(self, image):
-        # Kiểm tra và điều chỉnh độ sáng nếu cần
+        # Kiểm tra và điều chỉnh độ sáng nếu cần, đồng thời áp dụng độ tương phản
         image = self.adjust_brightness_if_needed(image)
         
         # Chuyển sang RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Điều chỉnh độ sáng và độ tương phản (giảm giá trị để tránh thay đổi quá nhiều)
-        alpha = 1.2  # Độ tương phản (giảm từ 1.5 xuống 1.2)
-        beta = 20    # Độ sáng (giảm từ 50 xuống 20)
+        # Điều chỉnh độ sáng và độ tương phản (gộp vào một bước)
+        alpha = 1.2  # Độ tương phản
+        beta = 20    # Độ sáng
         image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
         
         # Đảm bảo giá trị pixel trong khoảng [0, 255]
         image = np.clip(image, 0, 255)
-        
-        # Làm nét ảnh
-        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-        image = cv2.filter2D(image, -1, kernel)
         
         # Resize về kích thước phù hợp
         image = cv2.resize(image, (224, 224))
@@ -116,10 +114,8 @@ class PetRecognizer:
         return image
 
     def preprocess_image_for_owner(self, image):
-        # Kiểm tra và điều chỉnh độ sáng nếu cần
+        # Kiểm tra và điều chỉnh độ sáng nếu cần, đồng thời chuyển sang RGB
         image = self.adjust_brightness_if_needed(image)
-        
-        # Chuyển sang RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # Resize về kích thước phù hợp
@@ -138,6 +134,8 @@ class PetRecognizer:
 
         try:
             cursor = self.db_connection.cursor(dictionary=True)
+            
+            # Truy vấn thông tin chủ
             query_owner = """
             SELECT id, ho_ten, so_dien_thoai, dia_chi
             FROM chu_so_huu
@@ -150,6 +148,7 @@ class PetRecognizer:
                 cursor.close()
                 return None, [], None
 
+            # Truy vấn danh sách thú cưng
             query_pets = """
             SELECT id, ten, loai, tuoi, gioi_tinh
             FROM thu_cung
@@ -159,6 +158,7 @@ class PetRecognizer:
             cursor.execute(query_pets, (owner_info['id'], species_pattern))
             pets = cursor.fetchall()
 
+            # Truy vấn lịch hẹn
             pet_appointment = None
             if pets:
                 pet_ids = [pet['id'] for pet in pets]
@@ -211,7 +211,7 @@ class PetRecognizer:
         pet_image = self.preprocess_image_for_pet(image)
         owner_image = self.preprocess_image_for_owner(image)
 
-        # Dự đoán loài thú cưng (sửa phần này)
+        # Dự đoán loài thú cưng
         pet_prediction = self.pet_model.predict(pet_image)
         pet_confidence = pet_prediction[0][0]  # Lấy giá trị sigmoid (0-1)
         print(f"Pet prediction confidence: {pet_confidence:.2f}")
@@ -236,6 +236,7 @@ class PetRecognizer:
         }
 
         return result
+
     @staticmethod
     def get_webcam_frame(cap):
         ret, frame = cap.read()
