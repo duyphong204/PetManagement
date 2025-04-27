@@ -37,7 +37,6 @@ def open_manage_medicine_content(frame):
         if not selected_item:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn thuốc để xóa!")
             return
-        # Hỏi xác nhận trước khi xóa
         confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn xóa thuốc này không?")
         if not confirm:
             return
@@ -123,12 +122,6 @@ def open_manage_medicine_content(frame):
 
     search_field = ctk.CTkComboBox(search_frame, values=["Tên thuốc", "Số lượng", "Ngày nhập", "Hạn sử dụng"], width=150)
     search_field.pack(side="left", padx=5)
-
-    from_date_entry = DateEntry(search_frame, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
-    from_date_entry.pack(side="left", padx=5)
-
-    to_date_entry = DateEntry(search_frame, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
-    to_date_entry.pack(side="left", padx=5)
 
     table_frame = ctk.CTkFrame(right_frame)
     table_frame.pack(fill="both", expand=True, pady=5)

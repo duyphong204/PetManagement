@@ -344,42 +344,98 @@ class PrescriptionModel:
             cursor.close()
 
     def search_prescriptions(self, keyword, field):
-        """Tìm kiếm đơn thuốc không phân biệt hoa thường"""
+    
         if not self.connection:
             messagebox.showerror("Lỗi", "Không thể kết nối CSDL!")
             return []
 
-        if not keyword or not field:
+        keyword = keyword.strip()
+        if not keyword:
             return self.get_all_prescriptions()
 
-        keyword = keyword.strip()
         cursor = self.connection.cursor()
-        sql = """
-        SELECT ke_don.id, ke_don.id_lich_hen, thu_cung.ten, bac_si.ho_ten, 
-               ke_don.danh_sach_thuoc, ke_don.huong_dan, ke_don.ngay_ke_don
-        FROM ke_don
-        JOIN thu_cung ON ke_don.id_thu_cung = thu_cung.id
-        JOIN bac_si ON ke_don.id_bac_si = bac_si.id
-        WHERE LOWER(ke_don.id) LIKE LOWER(%s)
-           OR LOWER(ke_don.id_lich_hen) LIKE LOWER(%s)
-           OR LOWER(thu_cung.ten) LIKE LOWER(%s)
-           OR LOWER(bac_si.ho_ten) LIKE LOWER(%s)
-           OR LOWER(ke_don.danh_sach_thuoc) LIKE LOWER(%s)
-           OR LOWER(ke_don.huong_dan) LIKE LOWER(%s)
-           OR LOWER(ke_don.ngay_ke_don) LIKE LOWER(%s)
-        """
         try:
-            keyword_pattern = f'%{keyword}%'
-            cursor.execute(sql, (keyword_pattern, keyword_pattern, keyword_pattern, keyword_pattern, 
-                               keyword_pattern, keyword_pattern, keyword_pattern))
+            # Xây dựng truy vấn SQL dựa trên trường được chọn
+            if field == "ID Lịch hẹn":
+             # Tìm kiếm chính xác trên id_lich_hen (số nguyên)
+                try:
+                    keyword_int = int(keyword)  # Chuyển keyword thành số nguyên
+                    sql = """
+                        SELECT ke_don.id, ke_don.id_lich_hen, thu_cung.ten, bac_si.ho_ten, 
+                           ke_don.danh_sach_thuoc, ke_don.huong_dan, ke_don.ngay_ke_don
+                        FROM ke_don
+                        JOIN thu_cung ON ke_don.id_thu_cung = thu_cung.id
+                        JOIN bac_si ON ke_don.id_bac_si = bac_si.id
+                        WHERE ke_don.id_lich_hen = %s
+                    """
+                    cursor.execute(sql, (keyword_int,))
+                except ValueError:
+                    messagebox.showerror("Lỗi", "ID Lịch hẹn phải là số nguyên!")
+                    return []
+
+            elif field == "Tên thú cưng":
+                sql = """
+                    SELECT ke_don.id, ke_don.id_lich_hen, thu_cung.ten, bac_si.ho_ten, 
+                       ke_don.danh_sach_thuoc, ke_don.huong_dan, ke_don.ngay_ke_don
+                    FROM ke_don
+                    JOIN thu_cung ON ke_don.id_thu_cung = thu_cung.id
+                    JOIN bac_si ON ke_don.id_bac_si = bac_si.id
+                    WHERE LOWER(thu_cung.ten) LIKE LOWER(%s)
+                """
+                cursor.execute(sql, (f'%{keyword}%',))
+
+            elif field == "Tên bác sĩ":
+                sql = """
+                    SELECT ke_don.id, ke_don.id_lich_hen, thu_cung.ten, bac_si.ho_ten, 
+                       ke_don.danh_sach_thuoc, ke_don.huong_dan, ke_don.ngay_ke_don
+                    FROM ke_don
+                    JOIN thu_cung ON ke_don.id_thu_cung = thu_cung.id
+                    JOIN bac_si ON ke_don.id_bac_si = bac_si.id
+                    WHERE LOWER(bac_si.ho_ten) LIKE LOWER(%s)
+                """
+                cursor.execute(sql, (f'%{keyword}%',))
+
+            elif field == "Ngày kê đơn":
+                sql = """
+                    SELECT ke_don.id, ke_don.id_lich_hen, thu_cung.ten, bac_si.ho_ten, 
+                       ke_don.danh_sach_thuoc, ke_don.huong_dan, ke_don.ngay_ke_don
+                    FROM ke_don
+                    JOIN thu_cung ON ke_don.id_thu_cung = thu_cung.id
+                    JOIN bac_si ON ke_don.id_bac_si = bac_si.id
+                    WHERE LOWER(ke_don.ngay_ke_don) LIKE LOWER(%s)
+                """
+                cursor.execute(sql, (f'%{keyword}%',))
+
+            else:
+                # Mặc định: Tìm kiếm trên tất cả các trường
+                sql = """
+                    SELECT ke_don.id, ke_don.id_lich_hen, thu_cung.ten, bac_si.ho_ten, 
+                       ke_don.danh_sach_thuoc, ke_don.huong_dan, ke_don.ngay_ke_don
+                    FROM ke_don
+                    JOIN thu_cung ON ke_don.id_thu_cung = thu_cung.id
+                    JOIN bac_si ON ke_don.id_bac_si = bac_si.id
+                    WHERE LOWER(ke_don.id) LIKE LOWER(%s)
+                   OR LOWER(ke_don.id_lich_hen) LIKE LOWER(%s)
+                   OR LOWER(thu_cung.ten) LIKE LOWER(%s)
+                   OR LOWER(bac_si.ho_ten) LIKE LOWER(%s)
+                   OR LOWER(ke_don.danh_sach_thuoc) LIKE LOWER(%s)
+                   OR LOWER(ke_don.huong_dan) LIKE LOWER(%s)
+                   OR LOWER(ke_don.ngay_ke_don) LIKE LOWER(%s)
+                """
+                keyword_pattern = f'%{keyword}%'
+                cursor.execute(sql, (keyword_pattern, keyword_pattern, keyword_pattern, keyword_pattern, 
+                                 keyword_pattern, keyword_pattern, keyword_pattern))
+
             results = cursor.fetchall()
+            if not results:
+                messagebox.showinfo("Thông báo", "Không tìm thấy đơn thuốc nào!")
             return results
+
         except mysql.connector.Error as e:
             messagebox.showerror("Lỗi", f"Lỗi khi tìm kiếm đơn thuốc: {e}")
             return []
         finally:
             cursor.close()
-
     def get_all_prescriptions(self):
         """Lấy danh sách tất cả đơn thuốc"""
         if not self.connection:
