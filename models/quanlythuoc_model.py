@@ -197,12 +197,14 @@ class DrugModel:
             cursor.close()
 
     def search_medicine(self, keyword, field):
-        """Tìm kiếm thuốc theo từ khóa và trường cụ thể"""
+    
         if not self.connection:
             messagebox.showerror("Lỗi", "Không thể kết nối CSDL!")
             return []
-        if not keyword or not field:
-            return self.get_all_medicine()
+
+        keyword = keyword.strip() if keyword else ""
+
+
         cursor = self.connection.cursor()
         field_mapping = {
             "Tên thuốc": "ten_thuoc",
@@ -211,16 +213,36 @@ class DrugModel:
             "Giá": "gia"
         }
         db_field = field_mapping.get(field, "ten_thuoc")
-        sql = f"""
-        SELECT id, ten_thuoc, loai_thuoc, nha_san_xuat, gia
-        FROM thuoc
-        WHERE {db_field} LIKE %s
-        """
+
         try:
-            search_pattern = f"%{keyword}%"
-            cursor.execute(sql, (search_pattern,))
+            if db_field == "gia":
+                # Xử lý tìm kiếm chính xác cho trường Giá
+                try:
+                    price = float(keyword.strip())  # Chuyển keyword thành số thực
+                    sql = """
+                    SELECT id, ten_thuoc, loai_thuoc, nha_san_xuat, gia
+                    FROM thuoc
+                    WHERE gia = %s
+                    """
+                    cursor.execute(sql, (price,))
+                except ValueError:
+                    messagebox.showerror("Lỗi", "Giá phải là một số hợp lệ!")
+                    return []
+            else:
+                # Tìm kiếm chuỗi cho các trường khác
+                sql = """
+                SELECT id, ten_thuoc, loai_thuoc, nha_san_xuat, gia
+                FROM thuoc
+                WHERE LOWER({}) LIKE LOWER(%s)
+                """.format(db_field)
+                search_pattern = f"%{keyword}%"
+                cursor.execute(sql, (search_pattern,))
+
             results = cursor.fetchall()
+            if not results:
+                messagebox.showinfo("Thông báo", f"Không tìm thấy thuốc nào với {field} khớp '{keyword}'!")
             return results
+
         except mysql.connector.Error as e:
             messagebox.showerror("Lỗi", f"Lỗi khi tìm kiếm thuốc: {e}")
             return []

@@ -131,7 +131,12 @@ def open_manage_prescription_content(frame):
     def search_prescription_handler():
         keyword = search_entry.get().strip()
         field = search_field.get()
-        if not keyword or not field:
+        if not keyword:
+            messagebox.showwarning("Cảnh báo", "Vui lòng nhập từ khóa tìm kiếm!")
+            load_prescriptions()
+            return
+        if not field:
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn trường tìm kiếm!")
             load_prescriptions()
             return
         prescriptions = prescription_controller_instance.search_prescriptions(keyword, field)
