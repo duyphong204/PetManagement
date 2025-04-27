@@ -16,6 +16,11 @@ from views.manage_customer import open_manage_customer_content
 from views.medicine_warehouse import open_manage_medicine_content
 from views.KeDon_view import open_manage_prescription_content
 
+from views.apppointment_view import open_appointment_content
+from views.billing_payment_view import open_invoice_content
+from views.disease_treatment_view import open_treatment_content
+
+
 def show_home_content(frame):
     # Đường dẫn đến hình ảnh
     image_path = os.path.join(os.path.dirname(__file__), '..', 'images', 'home2.jpg')
@@ -73,13 +78,17 @@ def create_home_window(root):
         ("🏠 Trang chủ", lambda: set_content(show_home_content)),
         ("🐶 Quản lý Thú cưng", lambda: set_content(manage_pet.open_manage_pet_content)),
         ("📊 Báo cáo", lambda: show_report()),
-        (" Quản lý bác sĩ", lambda: set_content(manage_doctor.open_manage_doctor_content)),
-        (" Quản lý thuốc", lambda: set_content(quanlythuoc.open_manage_drug_content)),
+        ("🧑‍⚕️ Quản lý Bác sĩ", lambda: set_content(manage_doctor.open_manage_doctor_content)),
+        ("💊 Quản lý Thuốc", lambda: set_content(quanlythuoc.open_manage_drug_content)),
+        ("💊Điều trị bệnh", lambda: set_content(open_treatment_content)),
+        ("🧾 Thanh toán Hóa đơn", lambda: set_content(open_invoice_content)),
+        ("📅 Quản lý Lịch hẹn", lambda: set_content(open_appointment_content)),
         ("👥 Quản lý Khách hàng", lambda: set_content(open_manage_customer_content)),
-        ("💊 Quản lý Kho Thuốc", lambda: set_content(open_manage_medicine_content)),
-        ("📷 Camera", lambda: set_content(camera_view.show_camera_content)),
-        ("📷 Kê Đơn", lambda: set_content(open_manage_prescription_content)),    
+        ("🏥 Quản lý Kho Thuốc", lambda: set_content(open_manage_medicine_content)),
+        ("📷 Nhận diện", lambda: set_content(camera_view.show_camera_content)),
+        ("📝 Kê Đơn", lambda: set_content(open_manage_prescription_content)),
         ("🚪 Đăng xuất", logout),
+
     ]
 
     for btn_text, command in buttons:

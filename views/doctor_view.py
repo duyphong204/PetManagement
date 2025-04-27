@@ -4,7 +4,15 @@ import sys
 import os
 import views.manage_pet as manage_pet
 from views.manage_customer import open_manage_customer_content
+from views.manage_customer import open_manage_customer_content
 from views.medicine_warehouse import open_manage_medicine_content
+from views.KeDon_view import open_manage_prescription_content
+import views.manage_doctor_view as manage_doctor
+import views.quanlythuoc_view as quanlythuoc
+import views.report_view as report_view
+from controllers.report_controller import ReportController
+from views.apppointment_view import open_appointment_content
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -44,14 +52,20 @@ def open_doctor_dashboard(root):
     # Gọi giao diện đăng nhập, truyền root và callback để quay lại giao diện chính
         show_login_content(root, open_doctor_dashboard)
 
+    def show_report():
+        import views.report_view as report_view
+        report_controller = ReportController(main_content)
+        report_controller.show_report()
+
     # Danh sách nút menu
     buttons = [
         ("🏠 Trang chủ", lambda: set_content(show_home_content)),
         ("🐶 Quản lý Thú cưng", lambda: set_content(manage_pet.open_manage_pet_content)),
         ("👥 Quản lý Khách hàng", lambda: set_content(open_manage_customer_content)),
-        ("📅 Lịch hẹn khám", None),
-        ("📊 Báo cáo", None),
-        ("⚙️ Cài đặt", None),
+        (" Quản lý thuốc", lambda: set_content(quanlythuoc.open_manage_drug_content)),
+        ("📷 Kê Đơn", lambda: set_content(open_manage_prescription_content)),
+        ("📅 Quản lý Lịch hẹn", lambda: set_content(open_appointment_content)),
+        ("📊 Báo cáo", lambda: show_report()),
         ("🚪 Đăng xuất", logout),
     ]
 

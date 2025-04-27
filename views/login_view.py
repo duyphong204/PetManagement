@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def show_login_content(root, open_home_callback):
     import views.main_view as main_view
-    login_controller = LoginController()
+    login_controller = LoginController(root)
 
     # Nhập register_view tại đây để tránh circular import
     import views.register_view as register_view
@@ -96,6 +96,7 @@ def show_login_content(root, open_home_callback):
 
     # Xử lý đăng nhập
     def handle_login():
+        from views.dashboard_view import open_dashboard
         username = user.get().strip()
         pwd = password.get().strip()
         if username == "Username":
@@ -104,7 +105,8 @@ def show_login_content(root, open_home_callback):
             pwd = ""
         success, message = login_controller.login(username, pwd, open_home)
         if success:
-            open_home()  # Chuyển sang giao diện chính khi thành công và 
+            open_dashboard(login_controller, root)
+           # open_home()  # Chuyển sang giao diện chính khi thành công và 
         else:
             error_label.configure(text=message)
             
