@@ -19,7 +19,7 @@ from views.KeDon_view import open_manage_prescription_content
 from views.apppointment_view import open_appointment_content
 from views.billing_payment_view import open_invoice_content
 from views.disease_treatment_view import open_treatment_content
-
+from views.nguoidung_view import open_manage_user_content
 
 def show_home_content(frame):
     # Đường dẫn đến hình ảnh
@@ -79,6 +79,7 @@ def create_home_window(root):
         ("🐶 Quản lý Thú cưng", lambda: set_content(manage_pet.open_manage_pet_content)),
         ("📊 Báo cáo", lambda: show_report()),
         ("🧑‍⚕️ Quản lý Bác sĩ", lambda: set_content(manage_doctor.open_manage_doctor_content)),
+        ("🧑‍⚕️ Quản lý Người dùng", lambda: set_content(open_manage_user_content)),
         ("💊 Quản lý Thuốc", lambda: set_content(quanlythuoc.open_manage_drug_content)),
         ("💊Điều trị bệnh", lambda: set_content(open_treatment_content)),
         ("🧾 Thanh toán Hóa đơn", lambda: set_content(open_invoice_content)),

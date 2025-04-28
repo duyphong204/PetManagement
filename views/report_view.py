@@ -1,62 +1,66 @@
+# report_view.py: Tao giao dien cho chuc nang bao cao
 import customtkinter as ctk
+import controllers.report_controller as report_controller
 
-def show_report_content(frame, controller):
-    for widget in frame.winfo_children():
-        widget.destroy()
+def show_report_content(khung, dieukhien):
+    # Xoa noi dung cu trong khung
+    for thanhphan in khung.winfo_children():
+        thanhphan.destroy()
 
-    main_frame = ctk.CTkFrame(frame, fg_color="white", corner_radius=15, border_width=2, border_color="#E0E0E0")
-    main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+    # Tao khung chinh
+    khung_chinh = ctk.CTkFrame(khung, fg_color="white", corner_radius=15, border_width=2, border_color="#E0E0E0")
+    khung_chinh.pack(fill="both", expand=True, padx=20, pady=20)
 
-    # Title
-    title_label = ctk.CTkLabel(main_frame, text="BÁO CÁO THỐNG KẾ", font=("Arial", 30, "bold"), text_color="#1F618D")
-    title_label.pack(pady=(20, 25))
+    # Tieu de
+    nhan_tieude = ctk.CTkLabel(khung_chinh, text="BAO CAO THONG KE", font=("Arial", 30, "bold"), text_color="#1F618D")
+    nhan_tieude.pack(pady=(20, 25))
 
-    # Filter frame
-    filter_frame = ctk.CTkFrame(main_frame, fg_color="#F7F9F9", corner_radius=10)
-    filter_frame.pack(fill="x", pady=15, padx=15)
+    # Khung bo loc
+    khung_boloc = ctk.CTkFrame(khung_chinh, fg_color="#F7F9F9", corner_radius=10)
+    khung_boloc.pack(fill="x", pady=15, padx=15)
 
-    report_type_label = ctk.CTkLabel(filter_frame, text="Loại báo cáo:", font=("Arial", 16, "bold"), text_color="#2C3E50")
-    report_type_label.pack(side="left", padx=(10, 5))
+    nhan_loaibaocao = ctk.CTkLabel(khung_boloc, text="Loai bao cao:", font=("Arial", 16, "bold"), text_color="#2C3E50")
+    nhan_loaibaocao.pack(side="left", padx=(10, 5))
 
-    report_type_combobox = ctk.CTkComboBox(filter_frame, values=["Doanh thu", "Lịch hẹn", "Thú cưng", "Kho thuốc"],
-                                           font=("Arial", 16), width=160, dropdown_fg_color="#34495E",
-                                           dropdown_text_color="white", fg_color="white", text_color="black")
-    report_type_combobox.pack(side="left", padx=10)
-    report_type_combobox.set("Doanh thu")
+    hopchon_loaibaocao = ctk.CTkComboBox(khung_boloc, values=["Doanh thu", "Lich hen", "Thu cung", "Kho thuoc"],
+                                         font=("Arial", 16), width=160, dropdown_fg_color="#34495E",
+                                         dropdown_text_color="white", fg_color="white", text_color="black")
+    hopchon_loaibaocao.pack(side="left", padx=10)
+    hopchon_loaibaocao.set("Doanh thu")
 
-    start_date_label = ctk.CTkLabel(filter_frame, text="Từ ngày:", font=("Arial", 16, "bold"), text_color="#2C3E50")
-    start_date_label.pack(side="left", padx=(20, 5))
+    nhan_ngaybatdau = ctk.CTkLabel(khung_boloc, text="Tu ngay:", font=("Arial", 16, "bold"), text_color="#2C3E50")
+    nhan_ngaybatdau.pack(side="left", padx=(20, 5))
     
-    start_date_entry = ctk.CTkEntry(filter_frame, placeholder_text="YYYY-MM-DD", width=130, font=("Arial", 16), fg_color="white")
-    start_date_entry.pack(side="left", padx=5)
+    onhap_ngaybatdau = ctk.CTkEntry(khung_boloc, placeholder_text="YYYY-MM-DD", width=130, font=("Arial", 16), fg_color="white")
+    onhap_ngaybatdau.pack(side="left", padx=5)
     
-    end_date_label = ctk.CTkLabel(filter_frame, text="Đến ngày:", font=("Arial", 16, "bold"), text_color="#2C3E50")
-    end_date_label.pack(side="left", padx=5)
+    nhan_ngayketthuc = ctk.CTkLabel(khung_boloc, text="Den ngay:", font=("Arial", 16, "bold"), text_color="#2C3E50")
+    nhan_ngayketthuc.pack(side="left", padx=5)
     
-    end_date_entry = ctk.CTkEntry(filter_frame, placeholder_text="YYYY-MM-DD", width=130, font=("Arial", 16), fg_color="white")
-    end_date_entry.pack(side="left", padx=5)
+    onhap_ngayketthuc = ctk.CTkEntry(khung_boloc, placeholder_text="YYYY-MM-DD", width=130, font=("Arial", 16), fg_color="white")
+    onhap_ngayketthuc.pack(side="left", padx=5)
 
-    generate_button = ctk.CTkButton(filter_frame, text="Tạo báo cáo", font=("Arial", 16, "bold"),
-                                    fg_color="#3498DB", hover_color="#2980B9", width=130,
-                                    command=lambda: controller.generate_report(
-                                        report_type_combobox.get(),
-                                        start_date_entry.get(),
-                                        end_date_entry.get()))
-    generate_button.pack(side="left", padx=(20, 0))
+    nut_taobaocao = ctk.CTkButton(khung_boloc, text="Tao bao cao", font=("Arial", 16, "bold"),
+                                  fg_color="#3498DB", hover_color="#2980B9", width=130,
+                                  command=lambda: dieukhien.generate_report(
+                                      hopchon_loaibaocao.get(),
+                                      onhap_ngaybatdau.get(),
+                                      onhap_ngayketthuc.get()))
+    nut_taobaocao.pack(side="left", padx=(20, 0))
 
-    # Summary and Chart frame
-    summary_frame = ctk.CTkFrame(main_frame, fg_color="white")
-    summary_frame.pack(fill="x", pady=15)
+    # Khung tom tat
+    khung_tomtat = ctk.CTkFrame(khung_chinh, fg_color="white")
+    khung_tomtat.pack(fill="x", pady=15)
 
-    controller.summary_label = ctk.CTkLabel(summary_frame, text="Tổng doanh thu: 0 VNĐ",
-                                            font=("Arial", 18, "bold"), text_color="#2C3E50")
-    controller.summary_label.pack(pady=10)
+    dieukhien.nhan_tomtat = ctk.CTkLabel(khung_tomtat, text="Tong doanh thu: 0 VND",
+                                         font=("Arial", 18, "bold"), text_color="#2C3E50")
+    dieukhien.nhan_tomtat.pack(pady=10)
 
-    # Table frame with scrollbar
-    scrollable_frame = ctk.CTkScrollableFrame(main_frame, fg_color="white", corner_radius=10)
-    scrollable_frame.pack(fill="both", expand=True, padx=15, pady=15)
+    # Khung bang co the cuon
+    khung_cuon = ctk.CTkScrollableFrame(khung_chinh, fg_color="white", corner_radius=10)
+    khung_cuon.pack(fill="both", expand=True, padx=15, pady=15)
 
-    controller.table_frame = ctk.CTkFrame(scrollable_frame, fg_color="white")
-    controller.table_frame.pack(fill="both", expand=True)
+    dieukhien.khung_bang = ctk.CTkFrame(khung_cuon, fg_color="white")
+    dieukhien.khung_bang.pack(fill="both", expand=True)
 
-    controller.generate_report("Doanh thu", "", "")
+    dieukhien.generate_report("Doanh thu", "", "")
