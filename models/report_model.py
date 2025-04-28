@@ -165,7 +165,7 @@ class ReportModel:
             query = """
                 SELECT t.ten_thuoc, kt.so_luong, kt.ngay_nhap, kt.han_su_dung
                 FROM kho_thuoc kt
-                JOIN thuoc t ON kt.id_thuoc = t.id
+                JOIN thuoc t ON t.id_kho_thuoc = kt.id
             """
             cursor.execute(query)
             details = cursor.fetchall()
