@@ -48,7 +48,6 @@ class PetRecognizer:
             self.db_connection = None
 
     def __del__(self):
-        # Giải phóng mô hình khi đối tượng bị hủy
         self.pet_model = None
         self.owner_model = None
         self.close()
@@ -72,57 +71,61 @@ class PetRecognizer:
         return pet_model, owner_model
 
     def adjust_brightness_if_needed(self, image):
-        # Chuyển ảnh sang grayscale để tính độ sáng trung bình
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         brightness = np.mean(gray)
         print(f"Độ sáng trung bình của ảnh: {brightness:.2f}")
-        
-        # Nếu ảnh quá tối (độ sáng trung bình < 50), tăng độ sáng
         if brightness < 50:
             alpha = 1.0
-            beta = 50  # Tăng độ sáng
+            beta = 50
             image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
             print("Ảnh quá tối, đã tăng độ sáng.")
-        # Nếu ảnh quá sáng (độ sáng trung bình > 200), giảm độ sáng
         elif brightness > 200:
             alpha = 1.0
-            beta = -50  # Giảm độ sáng
+            beta = -50
             image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
             print("Ảnh quá sáng, đã giảm độ sáng.")
-        
         return image
 
     def preprocess_image_for_pet(self, image):
-        # Kiểm tra và điều chỉnh độ sáng nếu cần, đồng thời áp dụng độ tương phản
         image = self.adjust_brightness_if_needed(image)
-        
-        # Chuyển sang RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Điều chỉnh độ sáng và độ tương phản (gộp vào một bước)
-        alpha = 1.2  # Độ tương phản
-        beta = 20    # Độ sáng
+        alpha = 1.2
+        beta = 20
         image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
-        
-        # Đảm bảo giá trị pixel trong khoảng [0, 255]
         image = np.clip(image, 0, 255)
-        
-        # Resize về kích thước phù hợp
         image = cv2.resize(image, (224, 224))
         image = image / 255.0
         image = np.expand_dims(image, axis=0)
         return image
 
     def preprocess_image_for_owner(self, image):
-        # Kiểm tra và điều chỉnh độ sáng nếu cần, đồng thời chuyển sang RGB
         image = self.adjust_brightness_if_needed(image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Resize về kích thước phù hợp
         image = cv2.resize(image, (128, 128))
         image = image / 255.0
         image = np.expand_dims(image, axis=0)
         return image
+
+    # Thêm hàm kiểm tra xem chủ có sở hữu thú cưng thuộc loài đó không
+    def check_pet_in_owner_dataset(self, owner_name, species):
+        if not self.db_connection or not self.db_connection.is_connected():
+            return False
+        try:
+            cursor = self.db_connection.cursor(dictionary=True)
+            query = """
+            SELECT COUNT(*) as count
+            FROM thu_cung tc
+            JOIN chu_so_huu csh ON tc.id_chu_so_huu = csh.id
+            WHERE csh.ho_ten = %s AND tc.loai LIKE %s
+            """
+            species_pattern = f"%{species}%"
+            cursor.execute(query, (owner_name, species_pattern))
+            result = cursor.fetchone()
+            cursor.close()
+            return result['count'] > 0
+        except Exception as e:
+            print(f"Lỗi truy vấn kiểm tra thú cưng: {e}")
+            return False
 
     def get_owner_and_pet_info(self, owner_dir_name, species):
         owner_name = self.OWNER_NAME_MAPPING.get(owner_dir_name, "Không xác định")
@@ -134,8 +137,6 @@ class PetRecognizer:
 
         try:
             cursor = self.db_connection.cursor(dictionary=True)
-            
-            # Truy vấn thông tin chủ
             query_owner = """
             SELECT id, ho_ten, so_dien_thoai, dia_chi
             FROM chu_so_huu
@@ -148,7 +149,6 @@ class PetRecognizer:
                 cursor.close()
                 return None, [], None
 
-            # Truy vấn danh sách thú cưng
             query_pets = """
             SELECT id, ten, loai, tuoi, gioi_tinh
             FROM thu_cung
@@ -158,7 +158,6 @@ class PetRecognizer:
             cursor.execute(query_pets, (owner_info['id'], species_pattern))
             pets = cursor.fetchall()
 
-            # Truy vấn lịch hẹn
             pet_appointment = None
             if pets:
                 pet_ids = [pet['id'] for pet in pets]
@@ -213,24 +212,29 @@ class PetRecognizer:
 
         # Dự đoán loài thú cưng
         pet_prediction = self.pet_model.predict(pet_image)
-        pet_confidence = pet_prediction[0][0]  # Lấy giá trị sigmoid (0-1)
+        pet_confidence = pet_prediction[0][0]
         print(f"Pet prediction confidence: {pet_confidence:.2f}")
-        pet_label = "Mèo" if pet_confidence < 0.5 else "Chó"  # cat: 0, dog: 1
+        pet_label = "Mèo" if pet_confidence < 0.5 else "Chó"
 
+        # Dự đoán chủ
         owner_prediction = self.owner_model.predict(owner_image)
         owner_class = np.argmax(owner_prediction, axis=1)[0]
         owner_confidence = np.max(owner_prediction)
         print(f"Owner prediction confidence: {owner_confidence:.2f}")
         owner_name = self.owners_list[owner_class] if owner_class < len(self.owners_list) else "Không xác định"
 
-        owner_info, pets, pet_appointment = self.get_owner_and_pet_info(owner_name, pet_label)
+        # Thêm ngưỡng xác suất và kiểm tra thú cưng
+        confidence_threshold = 0.7
+        owner_info, pets, pet_appointment = None, [], None
+        if owner_confidence >= confidence_threshold and self.check_pet_in_owner_dataset(self.OWNER_NAME_MAPPING.get(owner_name, "Không xác định"), pet_label):
+            owner_info, pets, pet_appointment = self.get_owner_and_pet_info(owner_name, pet_label)
 
         result = {
             "species": pet_label,
             "species_confidence": float(pet_confidence),
             "owner_dir_name": owner_name,
             "owner_confidence": float(owner_confidence),
-            "owner_info": owner_info if owner_info else {"ho_ten": "Không tìm thấy", "so_dien_thoai": "", "dia_chi": ""},
+            "owner_info": owner_info if owner_info else {"ho_ten": "Không xác định", "so_dien_thoai": "", "dia_chi": ""},
             "pets": pets if pets else [],
             "pet_appointment": pet_appointment if pet_appointment else None
         }

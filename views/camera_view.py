@@ -1,5 +1,4 @@
 import os
-# Tắt cảnh báo TensorFlow
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import customtkinter as ctk
@@ -8,14 +7,11 @@ from PIL import Image
 from utils.pet_recognition import PetRecognizer
 
 def show_camera_content(frame):
-    # Khởi tạo PetRecognizer
     recognizer = PetRecognizer()
 
-    # Xóa nội dung cũ
     for widget in frame.winfo_children():
         widget.destroy()
 
-    # Tạo giao diện
     webcam_frame = ctk.CTkFrame(frame, fg_color="white")
     webcam_frame.pack(pady=10)
     video_label = ctk.CTkLabel(webcam_frame, text="")
@@ -23,42 +19,34 @@ def show_camera_content(frame):
     result_label = ctk.CTkLabel(webcam_frame, text="", font=("Arial", 14), text_color="black", justify="left", anchor="w")
     result_label.pack(pady=10, fill="x", padx=10)
 
-    # Khởi động webcam
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         result_label.configure(text="Không thể mở webcam!")
         return
 
-    # Khởi tạo mô hình và cơ sở dữ liệu
     if not recognizer.initialize():
         result_label.configure(text="Lỗi khởi tạo mô hình hoặc cơ sở dữ liệu! Vui lòng kiểm tra lại.")
         if cap:
             cap.release()
         return
 
-    # Gắn biến is_running và after_id vào video_label
     video_label.is_running = True
     video_label.after_id = None
-    video_label.last_frame = None  # Lưu khung hình đã xử lý để tái sử dụng
+    video_label.last_frame = None
 
     def update_frame():
         if not getattr(video_label, 'is_running', False):
             return
         frame = recognizer.get_webcam_frame(cap)
         if frame is not None:
-            # Chuyển đổi màu và resize một lần
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (320, 240))
-            # Lưu khung hình để tái sử dụng trong recognize_pet
             video_label.last_frame = frame
-            # Hiển thị khung hình
             ctk_image = ctk.CTkImage(light_image=Image.fromarray(frame_resized), size=(320, 240))
             video_label.configure(image=ctk_image)
-        # Lưu ID của tác vụ after
         video_label.after_id = video_label.after(10, update_frame)
 
     def recognize_pet():
-        # Sử dụng khung hình đã lưu để tránh xử lý lại
         frame = getattr(video_label, 'last_frame', None)
         if frame is None:
             frame = recognizer.get_webcam_frame(cap)
@@ -69,54 +57,50 @@ def show_camera_content(frame):
         try:
             result = recognizer.recognize_pet_and_owner(frame=frame)
             
-            # Định dạng kết quả để hiển thị
+            # Chỉ hiển thị loài nếu không có thông tin chủ
             species_text = f"Loài: {result['species']} (Confidence: {result['species_confidence']:.2f})"
-            owner_text = f"Chủ: {result['owner_info']['ho_ten']} (Confidence: {result['owner_confidence']:.2f})"
-            owner_details = f"SĐT: {result['owner_info']['so_dien_thoai']}\nĐịa chỉ: {result['owner_info']['dia_chi']}"
-            pet_text = "Thú cưng: "
-            if result['pets']:
-                pet_text += "\n" + "\n".join([f"- {pet['ten']} ({pet['loai']}, {pet['tuoi']} tuổi, {pet['gioi_tinh']})" for pet in result['pets']])
+            if result['owner_info']['ho_ten'] == "Không xác định":
+                result_text = f"{species_text}\nKhông xác định được chủ sở hữu."
             else:
-                pet_text += "Không tìm thấy"
-            if result['pet_appointment']:
-                appointment_time = f"{result['pet_appointment']['ngay_hen']} {result['pet_appointment']['gio_hen']}"
-                appointment_text = f"Lịch hẹn: {result['pet_appointment']['ten']} - {appointment_time} ({result['pet_appointment']['trang_thai']})"
-            else:
-                appointment_text = "Không có lịch hẹn"
-            result_text = f"{species_text}\n{owner_text}\n{owner_details}\n{pet_text}\n{appointment_text}"
+                owner_text = f"Chủ: {result['owner_info']['ho_ten']} (Confidence: {result['owner_confidence']:.2f})"
+                owner_details = f"SĐT: {result['owner_info']['so_dien_thoai']}\nĐịa chỉ: {result['owner_info']['dia_chi']}"
+                pet_text = "Thú cưng: "
+                if result['pets']:
+                    pet_text += "\n" + "\n".join([f"- {pet['ten']} ({pet['loai']}, {pet['tuoi']} tuổi, {pet['gioi_tinh']})" for pet in result['pets']])
+                else:
+                    pet_text += "Không tìm thấy"
+                if result['pet_appointment']:
+                    appointment_time = f"{result['pet_appointment']['ngay_hen']} {result['pet_appointment']['gio_hen']}"
+                    appointment_text = f"Lịch hẹn: {result['pet_appointment']['ten']} - {appointment_time} ({result['pet_appointment']['trang_thai']})"
+                else:
+                    appointment_text = "Không có lịch hẹn"
+                result_text = f"{species_text}\n{owner_text}\n{owner_details}\n{pet_text}\n{appointment_text}"
             
             result_label.configure(text=result_text)
         except Exception as e:
             result_label.configure(text=f"Lỗi nhận diện: {str(e)}")
 
     def stop_webcam():
-        # Dừng vòng lặp
         video_label.is_running = False
-        # Hủy tác vụ after nếu có
         if getattr(video_label, 'after_id', None):
             try:
                 video_label.after_cancel(video_label.after_id)
                 video_label.after_id = None
             except:
                 pass
-        # Giải phóng webcam
         if cap:
             cap.release()
-        # Chỉ cập nhật giao diện nếu widget còn tồn tại
         try:
             video_label.configure(image=None)
             result_label.configure(text="Webcam đã tắt.")
         except:
-            pass  # Bỏ qua nếu widget đã bị hủy
+            pass
         recognizer.close()
 
-    # Tạo nút
     ctk.CTkButton(webcam_frame, text="Nhận diện", font=("Arial", 14), corner_radius=10, width=200, height=40,
                   fg_color="#34495E", hover_color="#2C3E50", command=recognize_pet).pack(pady=10)
     ctk.CTkButton(webcam_frame, text="Tắt Webcam", font=("Arial", 14), corner_radius=10, width=200, height=40,
                   fg_color="#C0392B", hover_color="#922B21", command=stop_webcam).pack(pady=10)
 
-    # Đăng ký hàm stop_webcam khi video_label bị hủy
     video_label.bind("<Destroy>", lambda _: stop_webcam())
-
     update_frame()
